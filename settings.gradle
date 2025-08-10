@@ -1,0 +1,2 @@
+rootProject.name = 'JavaGame'
+include 'core', 'lwjgl3'

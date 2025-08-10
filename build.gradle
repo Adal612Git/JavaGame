@@ -1,0 +1,43 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+    ext {
+        gdxVersion = '1.11.0'
+    }
+}
+
+project(':core') {
+    apply plugin: 'java'
+
+    dependencies {
+        implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+    }
+}
+
+project(':lwjgl3') {
+    apply plugin: 'application'
+
+    dependencies {
+        implementation project(':core')
+        implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+        runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    }
+
+    application {
+        mainClass = 'com.juegDiego.game.lwjgl3.Lwjgl3Launcher'
+    }
+
+    sourceSets.main.resources.srcDirs += [file('../assets')]
+}
+
+wrapper {
+    gradleVersion = '8.5'
+    distributionType = Wrapper.DistributionType.BIN
+}
