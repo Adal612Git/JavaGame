@@ -43,10 +43,19 @@ public class RaceLoadingScreen implements Screen {
         String[] all={"orion","roky","thumper"};
         for(String id: all){
             String base="assets/images/personajes/"+id+"/";
+            // ensure placeholder is available for CharacterBase
+            String placeholder = base + "placeholder.png";
+            if (Gdx.files.internal(placeholder).exists() && !am.isLoaded(placeholder)) {
+                am.load(placeholder, Texture.class, param);
+            }
+            // attempt to preload a representative frame for common states
             String[] states={"idle","run","jump","fall"};
             for(String st:states){
                 String path=base+st+"/1.png";
-                if(!am.isLoaded(path)) am.load(path, Texture.class, param);
+                // only queue existing files to avoid runtime errors
+                if(Gdx.files.internal(path).exists() && !am.isLoaded(path)) {
+                    am.load(path, Texture.class, param);
+                }
             }
         }
         // scenario layers
