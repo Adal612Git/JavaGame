@@ -133,7 +133,7 @@ public class SelectScreen implements Screen {
             preview = cache.get(id);
             pendingId = null;
         } else {
-            String path = "assets/images/personajes/" + id + "/idle/1.png";
+            String path = "assets/images/personajes/" + id + "/placeholder.png";
             if (!gm.getAssetManager().isLoaded(path, Texture.class)) {
                 gm.getAssetManager().load(path, Texture.class);
             }
@@ -147,7 +147,7 @@ public class SelectScreen implements Screen {
         if (pendingId == null) return;
         GameMain gm = (GameMain) game;
         if (gm.getAssetManager().update()) {
-            String path = "assets/images/personajes/" + pendingId + "/idle/1.png";
+            String path = "assets/images/personajes/" + pendingId + "/placeholder.png";
             if (gm.getAssetManager().isLoaded(path)) {
                 Texture tex = gm.getAssetManager().get(path, Texture.class);
                 tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
