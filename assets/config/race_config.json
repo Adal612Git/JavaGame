@@ -1,0 +1,11 @@
+{
+  "finishX": 2000,
+  "npcSpeedMin": 220,
+  "npcSpeedMax": 260,
+  "obstacles": [
+    {"x":400, "width":40, "height":20},
+    {"x":800, "width":40, "height":20},
+    {"x":1200, "width":40, "height":20},
+    {"x":1600, "width":40, "height":20}
+  ]
+}
