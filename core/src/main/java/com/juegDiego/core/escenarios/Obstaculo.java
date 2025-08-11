@@ -40,4 +40,9 @@ public class Obstaculo implements ElementoEscenario {
     public void update(float delta) {
         // no-op
     }
+
+    @Override
+    public Texture getTexture() {
+        return texture;
+    }
 }

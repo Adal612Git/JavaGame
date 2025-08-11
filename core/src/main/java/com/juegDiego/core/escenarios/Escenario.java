@@ -5,8 +5,8 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
@@ -30,6 +30,8 @@ public abstract class Escenario {
     private final ObjectMap<Player, Float> boostTimers = new ObjectMap<>();
     private final ObjectMap<Player, Float> baseSpeeds = new ObjectMap<>();
     protected final Texture placeholder;
+    private final ShapeRenderer debugRenderer = new ShapeRenderer();
+    private final ObjectMap<String, Texture> textures = new ObjectMap<>();
 
     public Escenario() {
         placeholder = new Texture("images/artefactos/caja.png");
@@ -44,34 +46,38 @@ public abstract class Escenario {
             throw new FileNotFoundException("No existe archivo: " + path);
         }
         JsonValue root = new JsonReader().parse(handle);
-        Texture tex = placeholder;
+        Texture texPlataforma = getTexture("images/escenarios/ecenario_Ralph/ecenario_Ralph-02.png");
+        Texture texTrampolin = getTexture("images/escenarios/ecenario_Ralph/ecenario_Ralph-03.png");
+        Texture texObstaculo = getTexture("images/escenarios/ecenario_Ralph/ecenario_Ralph-04.png");
+        Texture texCaja = getTexture("images/escenarios/ecenario_Ralph/ecenario_Ralph-05.png");
+
         JsonValue arr;
         arr = root.get("plataformas");
         if (arr != null) {
             for (JsonValue v : arr) {
                 plataformas.add(new Plataforma(v.getFloat("x"), v.getFloat("y"),
-                        v.getFloat("w"), v.getFloat("h"), tex));
+                        v.getFloat("w"), v.getFloat("h"), texPlataforma));
             }
         }
         arr = root.get("trampolines");
         if (arr != null) {
             for (JsonValue v : arr) {
                 trampolines.add(new Trampolin(v.getFloat("x"), v.getFloat("y"),
-                        v.getFloat("w"), v.getFloat("h"), v.getFloat("impulso"), tex));
+                        v.getFloat("w"), v.getFloat("h"), v.getFloat("impulso"), texTrampolin));
             }
         }
         arr = root.get("obstaculos");
         if (arr != null) {
             for (JsonValue v : arr) {
                 obstaculos.add(new Obstaculo(v.getFloat("x"), v.getFloat("y"),
-                        v.getFloat("w"), v.getFloat("h"), tex));
+                        v.getFloat("w"), v.getFloat("h"), texObstaculo));
             }
         }
         arr = root.get("cajas");
         if (arr != null) {
             for (JsonValue v : arr) {
                 cajasArmas.add(new CajaArmas(v.getFloat("x"), v.getFloat("y"),
-                        v.getFloat("w"), v.getFloat("h"), tex));
+                        v.getFloat("w"), v.getFloat("h"), texCaja));
             }
         }
         String c = root.getString("clima", "SOLEADO");
@@ -109,10 +115,10 @@ public abstract class Escenario {
      * Dibuja el escenario y sus elementos.
      */
     public void dibujar(SpriteBatch batch) {
-        for (Plataforma p : plataformas) p.draw(batch);
-        for (Trampolin t : trampolines) t.draw(batch);
-        for (Obstaculo o : obstaculos) o.draw(batch);
-        for (CajaArmas c : cajasArmas) c.draw(batch);
+        drawElements(batch, plataformas);
+        drawElements(batch, trampolines);
+        drawElements(batch, obstaculos);
+        drawElements(batch, cajasArmas);
 
         if (clima == Clima.NEON) {
             Color prev = batch.getColor();
@@ -163,8 +169,34 @@ public abstract class Escenario {
 
     protected abstract void onPostCargar();
 
-    protected TextureRegion getTexture(String key) {
-        return null;
+    protected Texture getTexture(String path) {
+        if (!textures.containsKey(path)) {
+            FileHandle fh = Gdx.files.internal(path);
+            if (fh.exists()) {
+                textures.put(path, new Texture(fh));
+            } else {
+                Gdx.app.log("Escenario", "WARN textura no encontrada: " + path);
+                textures.put(path, null);
+            }
+        }
+        return textures.get(path);
+    }
+
+    private void drawElements(SpriteBatch batch, Array<? extends ElementoEscenario> elems) {
+        for (ElementoEscenario e : elems) {
+            if (e.getTexture() != null) {
+                e.draw(batch);
+            } else {
+                batch.end();
+                debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
+                debugRenderer.begin(ShapeRenderer.ShapeType.Line);
+                debugRenderer.setColor(Color.RED);
+                Rectangle b = e.getBounds();
+                debugRenderer.rect(b.x, b.y, b.width, b.height);
+                debugRenderer.end();
+                batch.begin();
+            }
+        }
     }
 
     public static Escenario crearEscenarioPrueba() {

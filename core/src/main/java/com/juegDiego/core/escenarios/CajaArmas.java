@@ -47,4 +47,9 @@ public class CajaArmas implements ElementoEscenario {
     public void update(float delta) {
         // animations or similar could be handled here
     }
+
+    @Override
+    public Texture getTexture() {
+        return texture;
+    }
 }

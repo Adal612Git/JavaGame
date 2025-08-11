@@ -1,5 +1,6 @@
 package com.juegDiego.core.escenarios;
 
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -12,4 +13,5 @@ public interface ElementoEscenario {
     Rectangle getBounds();
     void draw(SpriteBatch batch);
     void update(float delta);
+    Texture getTexture();
 }
