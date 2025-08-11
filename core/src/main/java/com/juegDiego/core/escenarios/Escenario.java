@@ -5,8 +5,9 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
@@ -29,12 +30,16 @@ public abstract class Escenario {
 
     private final ObjectMap<Player, Float> boostTimers = new ObjectMap<>();
     private final ObjectMap<Player, Float> baseSpeeds = new ObjectMap<>();
-    protected final Texture placeholder;
+    protected final Texture pixelBlanco;
     private final ShapeRenderer debugRenderer = new ShapeRenderer();
     private final ObjectMap<String, Texture> textures = new ObjectMap<>();
 
     public Escenario() {
-        placeholder = new Texture("images/artefactos/caja.png");
+        Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pm.setColor(Color.WHITE);
+        pm.fill();
+        pixelBlanco = new Texture(pm);
+        pm.dispose();
     }
 
     /**
@@ -119,13 +124,6 @@ public abstract class Escenario {
         drawElements(batch, trampolines);
         drawElements(batch, obstaculos);
         drawElements(batch, cajasArmas);
-
-        if (clima == Clima.NEON) {
-            Color prev = batch.getColor();
-            batch.setColor(1f, 0f, 1f, 0.25f);
-            batch.draw(placeholder, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-            batch.setColor(prev);
-        }
     }
 
     /**

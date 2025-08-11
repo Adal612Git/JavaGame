@@ -6,6 +6,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.juegDiego.core.escenarios.Escenario;
 import com.juegDiego.core.escenarios.Trampolin;
 import com.juegDiego.core.juego.Player;
@@ -14,8 +15,12 @@ public class GameScreen implements Screen {
 
     private final Game game;
 
+    public static final float WORLD_W = 1280f;
+    public static final float WORLD_H = 720f;
+
     private SpriteBatch batch;
     private OrthographicCamera camera;
+    private FitViewport viewport;
 
     private Escenario escenario;
     private Player player;
@@ -27,9 +32,10 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
-        camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        camera.position.set(camera.viewportWidth / 2f, camera.viewportHeight / 2f, 0);
-        camera.update();
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(WORLD_W, WORLD_H, camera);
+        viewport.apply();
+        camera.position.set(WORLD_W / 2f, WORLD_H / 2f, 0);
         escenario = Escenario.crearEscenarioPrueba();
         player = new Player(50, 200);
     }
@@ -59,6 +65,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
+        if (viewport != null) {
+            viewport.update(width, height, true);
+        }
     }
 
     @Override
