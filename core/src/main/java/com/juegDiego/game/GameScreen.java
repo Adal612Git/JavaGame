@@ -2,24 +2,19 @@ package com.juegDiego.game;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.juegDiego.core.escenarios.CajaArmas;
 import com.juegDiego.core.escenarios.Escenario;
-import com.juegDiego.core.escenarios.Obstaculo;
-import com.juegDiego.core.escenarios.Trampolin;
-import com.juegDiego.core.juego.Artefacto;
-import com.juegDiego.game.VisualConfig;
+import com.juegodiego.JuegoDiegoGame;
 import com.juegodiego.personajes.Personaje;
-
-import java.util.Random;
 
 public class GameScreen implements Screen {
 
@@ -31,15 +26,16 @@ public class GameScreen implements Screen {
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private FitViewport viewport;
+    private OrthographicCamera uiCamera;
+    private FitViewport uiViewport;
 
     private final Escenario escenario;
     private final Personaje player;
-    private int score;
-    private float damageCooldown;
-    private final Random rng = new Random();
+    private int hp = 100;
+    private int score = 0;
 
-    private Texture overlayTexture;
-    private ShaderProgram playerShader;
+    private Texture pixel;
+    private BitmapFont font;
 
     public GameScreen(Game game, Personaje player, Escenario escenario) {
         this.game = game;
@@ -55,51 +51,19 @@ public class GameScreen implements Screen {
         viewport.apply();
         camera.position.set(WORLD_W / 2f, WORLD_H / 2f, 0);
 
+        uiCamera = new OrthographicCamera();
+        uiViewport = new FitViewport(WORLD_W, WORLD_H, uiCamera);
+        uiViewport.apply();
+        uiCamera.position.set(WORLD_W / 2f, WORLD_H / 2f, 0);
+
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE);
         pm.fill();
-        overlayTexture = new Texture(pm);
-        overlayTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        pixel = new Texture(pm);
+        pixel.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         pm.dispose();
 
-        if (VisualConfig.PLAYER_EFFECT_ACTIVE) {
-            ShaderProgram.pedantic = false;
-            String vert = "attribute vec4 a_position;\n" +
-                    "attribute vec4 a_color;\n" +
-                    "attribute vec2 a_texCoord0;\n" +
-                    "uniform mat4 u_projTrans;\n" +
-                    "varying vec4 v_color;\n" +
-                    "varying vec2 v_texCoords;\n" +
-                    "void main(){\n" +
-                    "   v_color = a_color;\n" +
-                    "   v_texCoords = a_texCoord0;\n" +
-                    "   gl_Position =  u_projTrans * a_position;\n" +
-                    "}";
-            String frag = "#ifdef GL_ES\n" +
-                    "precision mediump float;\n" +
-                    "#endif\n" +
-                    "varying vec4 v_color;\n" +
-                    "varying vec2 v_texCoords;\n" +
-                    "uniform sampler2D u_texture;\n" +
-                    "uniform float u_saturation;\n" +
-                    "uniform float u_contrast;\n" +
-                    "uniform float u_brightness;\n" +
-                    "void main(){\n" +
-                    "   vec4 color = texture2D(u_texture, v_texCoords) * v_color;\n" +
-                    "   float grey = dot(color.rgb, vec3(0.2126,0.7152,0.0722));\n" +
-                    "   color.rgb = mix(vec3(grey), color.rgb, u_saturation);\n" +
-                    "   color.rgb = (color.rgb - 0.5) * u_contrast + 0.5;\n" +
-                    "   color.rgb += u_brightness;\n" +
-                    "   gl_FragColor = vec4(color.rgb, color.a);\n" +
-                    "}";
-            playerShader = new ShaderProgram(vert, frag);
-            if (!playerShader.isCompiled()) {
-                Gdx.app.error("Visual", "Player shader error: " + playerShader.getLog());
-                playerShader = null;
-            }
-        }
-
-        Gdx.app.log("Visual", "overlay=" + VisualConfig.OVERLAY_COLOR + " playerFX=" + (playerShader != null));
+        font = new BitmapFont();
     }
 
     @Override
@@ -107,63 +71,69 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
+            applyDamage("sim");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
+            addScore(10, "Pickup=item");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
+            addScore(20, "Kill/Objective");
+        }
+
         player.update(delta);
         escenario.actualizar(delta);
 
-        if (damageCooldown > 0) damageCooldown -= delta;
-
-        for (Trampolin t : escenario.getTrampolines()) {
-            if (escenario.intersectaPersonaje(t, player)) {
-                player.getVelocity().y = t.getImpulsoY();
-                escenario.rampaVelocidad(player, 1.5f, 2f);
-            }
-        }
-
-        for (int i = escenario.getCajasArmas().size - 1; i >= 0; i--) {
-            CajaArmas c = escenario.getCajasArmas().get(i);
-            if (escenario.intersectaPersonaje(c, player)) {
-                Artefacto a = c.abrir(rng);
-                escenario.getCajasArmas().removeIndex(i);
-                score += 10;
-                Gdx.app.log("Game", "Arma recogida, puntaje actual: " + score + " (" + a + ")");
-            }
-        }
-
-        for (Obstaculo o : escenario.getObstaculos()) {
-            if (damageCooldown <= 0 && escenario.intersectaPersonaje(o, player)) {
-                score -= 5;
-                damageCooldown = 1f;
-                Gdx.app.log("Game", "Recibido daño, puntaje actual: " + score);
-            }
-        }
-
-        if (score >= 30) {
-            Gdx.app.log("Game", "Victoria, puntaje final: " + score);
-            game.setScreen(new VictoryScreen(game, score));
-            return;
-        } else if (score <= -10) {
-            Gdx.app.log("Game", "Derrota, puntaje final: " + score);
-            game.setScreen(new DefeatScreen(game, score));
+        if (hp <= 0) {
+            Gdx.app.log("Game", "Player died (hp=0, score=" + score + ")");
+            ((JuegoDiegoGame) game).setState(JuegoDiegoGame.State.MENU);
+            game.setScreen(new CharacterSelectionScreen(game));
             return;
         }
 
-        Gdx.app.log("DEBUG", "Player state=" + player.getEstado() + " grounded=" + player.isOnGround() +
-                " pos=(" + player.getPosition().x + "," + player.getPosition().y + ")");
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         escenario.dibujar(batch);
-        batch.setColor(VisualConfig.OVERLAY_COLOR);
-        batch.draw(overlayTexture, 0, 0, WORLD_W, WORLD_H);
-        batch.setColor(Color.WHITE);
-        if (playerShader != null) {
-            batch.setShader(playerShader);
-            playerShader.setUniformf("u_saturation", VisualConfig.PLAYER_SATURATION);
-            playerShader.setUniformf("u_contrast", VisualConfig.PLAYER_CONTRAST);
-            playerShader.setUniformf("u_brightness", VisualConfig.PLAYER_BRIGHTNESS);
-        }
         player.render(batch);
-        batch.setShader(null);
+        batch.end();
+
+        drawHUD();
+    }
+
+    private void applyDamage(String source) {
+        int old = hp;
+        hp -= 10;
+        if (hp < 0) hp = 0;
+        if (hp != old) {
+            Gdx.app.debug("Game", "HP changed: " + old + " -> " + hp);
+        }
+        Gdx.app.log("Game", "Damage source=" + source + " hp=" + hp);
+    }
+
+    private void addScore(int amount, String logPrefix) {
+        int old = score;
+        score += amount;
+        if (score < 0) score = 0;
+        if (score != old) {
+            Gdx.app.debug("Game", "Score changed: " + old + " -> " + score);
+        }
+        Gdx.app.log("Game", logPrefix + " score=" + score);
+    }
+
+    private void drawHUD() {
+        uiCamera.update();
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        font.draw(batch, "HP: " + hp, 20, WORLD_H - 20);
+        float barW = 200f;
+        float barH = 20f;
+        batch.setColor(Color.DARK_GRAY);
+        batch.draw(pixel, 20, WORLD_H - 40, barW, barH);
+        batch.setColor(Color.RED);
+        batch.draw(pixel, 20, WORLD_H - 40, barW * (hp / 100f), barH);
+        batch.setColor(Color.WHITE);
+        font.draw(batch, "Score: " + score, 20, WORLD_H - 60);
         batch.end();
     }
 
@@ -171,6 +141,9 @@ public class GameScreen implements Screen {
     public void resize(int width, int height) {
         if (viewport != null) {
             viewport.update(width, height, true);
+        }
+        if (uiViewport != null) {
+            uiViewport.update(width, height, true);
         }
     }
 
@@ -189,10 +162,8 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         batch.dispose();
-        overlayTexture.dispose();
-        if (playerShader != null) {
-            playerShader.dispose();
-        }
+        pixel.dispose();
+        font.dispose();
     }
 }
 

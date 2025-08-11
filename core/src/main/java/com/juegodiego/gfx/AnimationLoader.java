@@ -323,7 +323,8 @@ public class AnimationLoader {
         }
         int idleCount = map.containsKey(Estado.IDLE) ? map.get(Estado.IDLE).getKeyFrames().length : 0;
         int runCount = map.containsKey(Estado.RUN) ? map.get(Estado.RUN).getKeyFrames().length : 0;
-        Gdx.app.log("INFO", "Anim loaded: " + personaje + " IDLE=" + idleCount + " RUN=" + runCount);
+        int jumpCount = map.containsKey(Estado.JUMP) ? map.get(Estado.JUMP).getKeyFrames().length : 0;
+        Gdx.app.log("INFO", "Anim loaded: " + personaje + " IDLE=" + idleCount + " RUN=" + runCount + " JUMP=" + jumpCount);
         return map;
     }
 }
