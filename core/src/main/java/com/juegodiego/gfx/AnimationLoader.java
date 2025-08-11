@@ -98,7 +98,9 @@ public class AnimationLoader {
                     String path = dirPath + "/" + fh.name();
                     am.load(path, Texture.class);
                     am.finishLoadingAsset(path);
-                    frames.add(new TextureRegion(am.get(path, Texture.class)));
+                    Texture tex = am.get(path, Texture.class);
+                    tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                    frames.add(new TextureRegion(tex));
                     paths.add(path);
                 }
                 float fd = st == Estado.RUN ? RUN_SPEED : DEFAULT_SPEED;
@@ -122,21 +124,37 @@ public class AnimationLoader {
             }
         }
 
-        // Fallback IDLE usando Standing.png
+        // Fallback IDLE: RUN frame0 o Standing.png
         if (!map.containsKey(Estado.IDLE)) {
-            String standingPath = base + "Standing.png";
-            FileHandle st = Gdx.files.internal(standingPath);
-            if (st.exists()) {
-                am.load(standingPath, Texture.class);
-                am.finishLoadingAsset(standingPath);
-                TextureRegion region = new TextureRegion(am.get(standingPath, Texture.class));
-                map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, region));
-                Array<String> paths = new Array<>(String.class);
-                paths.add(standingPath);
-                loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.IDLE, paths);
-                Gdx.app.log("INFO", "Standing.png fallback for IDLE in " + personaje);
+            Animation<TextureRegion> runAnim = map.get(Estado.RUN);
+            if (runAnim != null && runAnim.getKeyFrames().length > 0) {
+                TextureRegion first = runAnim.getKeyFrames()[0];
+                map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, first));
+                EnumMap<Estado, Array<String>> pathMap =
+                        loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class));
+                Array<String> runPaths = pathMap.get(Estado.RUN);
+                if (runPaths != null) {
+                    pathMap.put(Estado.IDLE, runPaths);
+                }
+                Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ". Fallback=RUN frame0");
+                diag.record(personaje, Estado.IDLE, "FALLBACK", 1, "from RUN");
             } else {
-                Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ".");
+                String standingPath = base + "Standing.png";
+                FileHandle st = Gdx.files.internal(standingPath);
+                if (st.exists()) {
+                    am.load(standingPath, Texture.class);
+                    am.finishLoadingAsset(standingPath);
+                    Texture tex = am.get(standingPath, Texture.class);
+                    tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                    TextureRegion region = new TextureRegion(tex);
+                    map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, region));
+                    Array<String> paths = new Array<>(String.class);
+                    paths.add(standingPath);
+                    loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.IDLE, paths);
+                    Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ". Fallback=Standing.png");
+                } else {
+                    Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ". Fallback=NONE");
+                }
             }
         }
 
@@ -180,7 +198,9 @@ public class AnimationLoader {
                     String path = fbDir + fh.name();
                     am.load(path, Texture.class);
                     am.finishLoadingAsset(path);
-                    frames.add(new TextureRegion(am.get(path, Texture.class)));
+                    Texture tex = am.get(path, Texture.class);
+                    tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                    frames.add(new TextureRegion(tex));
                     paths.add(path);
                 }
                 TextureRegion[] arr = frames.toArray(TextureRegion.class);
@@ -214,14 +234,6 @@ public class AnimationLoader {
             }
         }
 
-        // Fallback IDLE desde RUN
-        if (!map.containsKey(Estado.IDLE) && map.containsKey(Estado.RUN)) {
-            TextureRegion first = map.get(Estado.RUN).getKeyFrames()[0];
-            map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, first));
-            diag.record(personaje, Estado.IDLE, "FALLBACK", 1, "from RUN");
-            Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ". Using RUN as fallback.");
-        }
-
         // Fallback JUMP y FALL
         String jumpFile;
         switch (animal) {
@@ -246,7 +258,9 @@ public class AnimationLoader {
             if (exists) {
                 am.load(path, Texture.class);
                 am.finishLoadingAsset(path);
-                TextureRegion region = new TextureRegion(am.get(path, Texture.class));
+                Texture tex = am.get(path, Texture.class);
+                tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                TextureRegion region = new TextureRegion(tex);
                 map.put(Estado.JUMP, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, Estado.JUMP, "FALLBACK", 1, path);
                 Gdx.app.log("[[" + personaje + "]]", "FALLBACK JUMP frames=1 sample=" + path);
@@ -264,7 +278,9 @@ public class AnimationLoader {
             if (exists) {
                 am.load(path, Texture.class);
                 am.finishLoadingAsset(path);
-                TextureRegion region = new TextureRegion(am.get(path, Texture.class));
+                Texture tex = am.get(path, Texture.class);
+                tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                TextureRegion region = new TextureRegion(tex);
                 map.put(Estado.FALL, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, Estado.FALL, "FALLBACK", 1, path);
                 Gdx.app.log("[[" + personaje + "]]", "FALLBACK FALL frames=1 sample=" + path);
@@ -308,7 +324,9 @@ public class AnimationLoader {
             if (exists) {
                 am.load(path, Texture.class);
                 am.finishLoadingAsset(path);
-                TextureRegion region = new TextureRegion(am.get(path, Texture.class));
+                Texture tex = am.get(path, Texture.class);
+                tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                TextureRegion region = new TextureRegion(tex);
                 map.put(Estado.DEAD, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, Estado.DEAD, "FALLBACK", 1, path);
                 Gdx.app.log("[[" + personaje + "]]", "FALLBACK DEAD frames=1 sample=" + path);
