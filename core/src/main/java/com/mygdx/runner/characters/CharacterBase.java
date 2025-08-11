@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.mygdx.runner.graphics.AnimationLoader;
@@ -27,9 +28,18 @@ public class CharacterBase {
     private final EnumMap<State, Animation<TextureRegion>> anims;
     private final com.badlogic.gdx.utils.Array<Texture> textures;
 
+    private final float maxSpeedX;
+    private final float frictionX;
+
     public CharacterBase(String name, float startX) {
+        this(name, startX, 250f, 6f);
+    }
+
+    public CharacterBase(String name, float startX, float maxSpeedX, float frictionX) {
         this.name = name;
         position.set(startX, 0);
+        this.maxSpeedX = maxSpeedX;
+        this.frictionX = frictionX;
         AnimationLoader.Result res = AnimationLoader.load(name);
         this.anims = res.animations;
         this.textures = res.textures;
@@ -62,8 +72,11 @@ public class CharacterBase {
         }
         // friction
         if (onGround) {
-            velocity.x *= 0.98f;
+            float drag = frictionX * delta;
+            velocity.x -= velocity.x * drag;
         }
+        // clamp horizontal speed
+        velocity.x = MathUtils.clamp(velocity.x, -maxSpeedX, maxSpeedX);
         if (velocity.x > 0) facingRight = true;
         else if (velocity.x < 0) facingRight = false;
     }
@@ -104,4 +117,5 @@ public class CharacterBase {
     public float getWidth() { return width; }
     public float getHeight() { return height; }
     public boolean isOnGround() { return onGround; }
+    public float getMaxSpeedX() { return maxSpeedX; }
 }

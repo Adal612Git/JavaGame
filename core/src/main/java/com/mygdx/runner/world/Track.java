@@ -17,8 +17,8 @@ public class Track {
     private float finishX = 3000f;
     private final List<Rectangle> obstacles = new ArrayList<>();
     private float groundY = 0f;
-    private float npcMin = 220f;
-    private float npcMax = 260f;
+    private float npcMin = 160f;
+    private float npcMax = 210f;
 
     public Track() {
         loadConfig();

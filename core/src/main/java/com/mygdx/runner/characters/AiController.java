@@ -13,18 +13,23 @@ public class AiController {
     private final Track track;
     private float targetSpeed;
     private float noiseTimer;
+    private final float minSpeed;
+    private final float maxSpeed;
 
     public AiController(CharacterBase c, Track t, float min, float max) {
         this.character = c;
         this.track = t;
+        this.minSpeed = min;
+        this.maxSpeed = max;
         this.targetSpeed = MathUtils.random(min, max);
-        Gdx.app.log("INFO", c.getName() + " targetSpeed=" + (int)targetSpeed);
+        Gdx.app.log("INFO", "NPC[target=" + (int)targetSpeed + "]");
     }
 
     public void update(float delta) {
         noiseTimer -= delta;
         if (noiseTimer <= 0f) {
             targetSpeed += MathUtils.random(-10f, 10f);
+            targetSpeed = MathUtils.clamp(targetSpeed, minSpeed, maxSpeed);
             noiseTimer = MathUtils.random(1f, 2f);
         }
         float accel = 500f;
