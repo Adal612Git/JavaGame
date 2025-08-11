@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.juegDiego.core.escenarios.Escenario;
 import com.juegDiego.core.escenarios.Trampolin;
@@ -14,6 +15,7 @@ public class GameScreen implements Screen {
     private final Game game;
 
     private SpriteBatch batch;
+    private OrthographicCamera camera;
 
     private Escenario escenario;
     private Player player;
@@ -25,6 +27,9 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
+        camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        camera.position.set(camera.viewportWidth / 2f, camera.viewportHeight / 2f, 0);
+        camera.update();
         escenario = Escenario.crearEscenarioPrueba();
         player = new Player(50, 200);
     }
@@ -44,6 +49,8 @@ public class GameScreen implements Screen {
             }
         }
 
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
         escenario.dibujar(batch);
         player.draw(batch);

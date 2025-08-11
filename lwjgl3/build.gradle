@@ -1,0 +1,22 @@
+project(':lwjgl3') {
+    apply plugin: 'application'
+
+    dependencies {
+        implementation project(':core')
+        implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+        runtimeOnly "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+    }
+
+    application {
+        mainClass = 'com.juegDiego.game.lwjgl3.Lwjgl3Launcher'
+    }
+
+    // 1) Incluir ../assets como recursos del módulo desktop
+    sourceSets.main.resources.srcDirs += [ file('../assets') ]
+
+    // 2) Forzar working dir = raíz del proyecto (donde vive /assets)
+    tasks.named('run', JavaExec) {
+        workingDir = file("${rootDir}")
+        println "[[GRADLE-RUN]] workingDir=" + workingDir
+    }
+}
