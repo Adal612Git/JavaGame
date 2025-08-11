@@ -1,0 +1,15 @@
+# Diagrama UML
+
+Este diagrama describe las clases principales del proyecto **JavaGame** y sus relaciones.
+
+## Visualización
+Puedes abrir `uml.puml` con [PlantUML](https://plantuml.com/) o un visor online para generar la imagen.
+
+## Descripción
+- **JavaGame**: Clase principal que extiende `Game` y gestiona las pantallas.
+- **GameScreen**: Implementa `Screen` y se encarga de dibujar el fondo, los personajes y los artefactos.
+- **Dependencias**: Uso de `SpriteBatch` para dibujar, `Texture` para imágenes y `BitmapFont` para texto.
+
+**Flujo principal**:
+1. `JavaGame#create()` configura y llama a `setScreen(new GameScreen())`.
+2. `GameScreen#render()` dibuja en orden: fondo → personajes → artefactos → texto.

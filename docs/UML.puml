@@ -1,0 +1,37 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+package "com.juegDiego.game" {
+  class JavaGame {
+    +create(): void
+    +render(): void
+    +dispose(): void
+  }
+
+  class GameScreen {
+    -game: JavaGame
+    -batch: SpriteBatch
+    -bg: Texture
+    -orion: Texture
+    -roky: Texture
+    -thumper: Texture
+    -caja: Texture
+    -escudo: Texture
+    -font: BitmapFont
+    +show(): void
+    +render(delta: float): void
+    +resize(w:int, h:int): void
+    +pause(): void
+    +resume(): void
+    +hide(): void
+    +dispose(): void
+  }
+
+  JavaGame ..|> Game
+  GameScreen ..|> Screen
+  JavaGame --> GameScreen : setScreen(...)
+  GameScreen --> SpriteBatch
+  GameScreen --> Texture
+  GameScreen --> BitmapFont
+}
+@enduml
