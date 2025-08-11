@@ -17,6 +17,9 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.juegDiego.core.escenarios.Escenario;
 import com.juegDiego.core.escenarios.Plataforma;
 import com.juegodiego.JuegoDiegoGame;
+import com.juegodiego.ScoreManager;
+import com.juegodiego.SpawnManager;
+import com.juegodiego.SpawnManager.ArtefactoTipo;
 import com.juegodiego.personajes.Personaje;
 
 public class GameScreen implements Screen {
@@ -35,7 +38,12 @@ public class GameScreen implements Screen {
     private final Escenario escenario;
     private final Personaje player;
     private float hp = 100f;
-    private int score = 0;
+    private ScoreManager scoreManager;
+    private SpawnManager spawnManager;
+    private final ArtefactoTipo[] debugCycle = {
+            ArtefactoTipo.TURBO, ArtefactoTipo.TRUENO, ArtefactoTipo.ESCUDO,
+            ArtefactoTipo.PISTOLA, ArtefactoTipo.MOCHILA, ArtefactoTipo.CAJA};
+    private int debugIndex;
 
     private Texture pixel;
     private BitmapFont font;
@@ -79,6 +87,9 @@ public class GameScreen implements Screen {
 
         font = new BitmapFont();
 
+        scoreManager = new ScoreManager();
+        spawnManager = new SpawnManager(escenario);
+
         float boxW = 220f;
         float boxH = 40f;
         resumeRect = new Rectangle(WORLD_W / 2f - boxW / 2f, WORLD_H / 2f + 40f, boxW, boxH);
@@ -102,15 +113,19 @@ public class GameScreen implements Screen {
             if (Gdx.input.isKeyJustPressed(Input.Keys.F)) {
                 applyDamage(10f, "Damage source=sim");
             }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.G)) {
-                addScore(10, "Pickup=item");
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) {
+                ArtefactoTipo t = debugCycle[debugIndex];
+                spawnManager.forceSpawn(t, player.getBounds().x, player.getBounds().y + player.getBounds().height + 2f);
+                debugIndex = (debugIndex + 1) % debugCycle.length;
             }
-            if (Gdx.input.isKeyJustPressed(Input.Keys.H)) {
-                addScore(20, "Kill/Objective");
+            if (Gdx.input.isKeyJustPressed(Input.Keys.F10)) {
+                spawnManager.breakNearestBox(player, scoreManager);
             }
 
             player.update(delta);
             escenario.actualizar(delta);
+            spawnManager.update(delta, player, scoreManager);
+            scoreManager.update(delta);
 
             lastContact = contact;
             contact = Contact.NONE;
@@ -143,7 +158,7 @@ public class GameScreen implements Screen {
                 }
             }
 
-            if (player.isOnGround() && contact == Contact.HAZARD) {
+            if (player.isOnGround() && contact == Contact.HAZARD && !scoreManager.isEscudoActive()) {
                 float old = hp;
                 hp -= 5f * delta;
                 if (hp < 0f) hp = 0f;
@@ -159,7 +174,7 @@ public class GameScreen implements Screen {
             }
 
             if (hp <= 0f) {
-                Gdx.app.log("INFO", "Player died (hp=0, score=" + score + ")");
+                Gdx.app.log("INFO", "Player died (hp=0, score=" + scoreManager.getScore() + ")");
                 ((JuegoDiegoGame) game).setState(JuegoDiegoGame.State.MENU);
                 game.setScreen(new CharacterSelectionScreen(game));
                 return;
@@ -172,13 +187,14 @@ public class GameScreen implements Screen {
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.F8)) {
             Gdx.app.log("INFO", "DUMP player: state=" + player.getEstado() + " grounded=" + player.isOnGround() +
-                    " contact=" + contact + " hp=" + (int)hp + " score=" + score + " alpha=" + batch.getColor().a);
+                    " contact=" + contact + " hp=" + (int)hp + " score=" + scoreManager.getScore() + " alpha=" + batch.getColor().a);
         }
 
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         escenario.dibujar(batch);
+        spawnManager.render(batch);
         Color bc = batch.getColor();
         if (bc.r != 1f || bc.g != 1f || bc.b != 1f || bc.a != 1f) {
             Gdx.app.log("WARN", "Alpha leak detected and fixed");
@@ -202,7 +218,7 @@ public class GameScreen implements Screen {
             Gdx.app.log("INFO", "Pause action: RESUME");
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
             Gdx.app.log("INFO", "Pause action: END_RUN");
-            Gdx.app.log("INFO", "Run ended by user (score=" + score + ")");
+            Gdx.app.log("INFO", "Run ended by user (score=" + scoreManager.getScore() + ")");
             ((JuegoDiegoGame) game).setState(JuegoDiegoGame.State.MENU);
             game.setScreen(new CharacterSelectionScreen(game));
             return true;
@@ -221,7 +237,7 @@ public class GameScreen implements Screen {
                 Gdx.app.log("INFO", "Pause action: RESUME");
             } else if (terminateRect.contains(mx, my)) {
                 Gdx.app.log("INFO", "Pause action: END_RUN");
-                Gdx.app.log("INFO", "Run ended by user (score=" + score + ")");
+                Gdx.app.log("INFO", "Run ended by user (score=" + scoreManager.getScore() + ")");
                 ((JuegoDiegoGame) game).setState(JuegoDiegoGame.State.MENU);
                 game.setScreen(new CharacterSelectionScreen(game));
                 return true;
@@ -245,16 +261,6 @@ public class GameScreen implements Screen {
         Gdx.app.log("Game", log + " hp=" + (int)hp);
     }
 
-    private void addScore(int amount, String logPrefix) {
-        int old = score;
-        score += amount;
-        if (score < 0) score = 0;
-        if (score != old) {
-            Gdx.app.debug("Game", "Score changed: " + old + " -> " + score);
-        }
-        Gdx.app.log("Game", logPrefix + " score=" + score);
-    }
-
     private void drawHUD() {
         uiCamera.update();
         batch.setProjectionMatrix(uiCamera.combined);
@@ -267,7 +273,12 @@ public class GameScreen implements Screen {
         batch.setColor(Color.RED);
         batch.draw(pixel, 20, WORLD_H - 40, barW * (hp / 100f), barH);
         batch.setColor(Color.WHITE);
-        font.draw(batch, "Score: " + score, 20, WORLD_H - 60);
+        String s = "Score: " + scoreManager.getScore();
+        if (scoreManager.isTruenoActive()) s += " x2";
+        font.draw(batch, s, WORLD_W - 200, WORLD_H - 20);
+        if (scoreManager.getAmmo() > 0) {
+            font.draw(batch, "Ammo: " + scoreManager.getAmmo(), WORLD_W - 200, 40);
+        }
         batch.setColor(Color.WHITE);
         batch.end();
         batch.setColor(Color.WHITE);
@@ -281,7 +292,7 @@ public class GameScreen implements Screen {
         batch.draw(pixel, 0, 0, WORLD_W, WORLD_H);
         batch.setColor(Color.WHITE);
         font.draw(batch, "PAUSA", WORLD_W / 2f - 40f, WORLD_H / 2f + 100f);
-        font.draw(batch, "Score actual: " + score, WORLD_W / 2f - 80f, WORLD_H / 2f + 70f);
+        font.draw(batch, "Score actual: " + scoreManager.getScore(), WORLD_W / 2f - 80f, WORLD_H / 2f + 70f);
         font.draw(batch, "[R] Reanudar", resumeRect.x + 10, resumeRect.y + 25);
         font.draw(batch, "[T] Terminar partida y volver a Selección", terminateRect.x + 10, terminateRect.y + 25);
         font.draw(batch, "[Q] Salir del juego", quitRect.x + 10, quitRect.y + 25);
