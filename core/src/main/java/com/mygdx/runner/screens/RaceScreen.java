@@ -34,6 +34,7 @@ public class RaceScreen implements Screen {
     private final String playerId;
     private SpriteBatch batch;
     private Texture pixel;
+    private Texture skyTex;
     private BitmapFont font;
     private OrthographicCamera camera;
     private ParallaxBackground bg;
@@ -42,10 +43,19 @@ public class RaceScreen implements Screen {
     private PlayerController playerCtrl;
     private AiController ai1,ai2;
     private float countdown=3f;
-    private boolean started=false;
-    private boolean raceFinished=false;
     private float time;
     private Map<CharacterBase,Float> finishTimes = new HashMap<>();
+    private enum RaceState { COUNTDOWN, RUNNING, FINISHED, RESULTS }
+    private RaceState state = RaceState.COUNTDOWN;
+    private boolean loggedFinished;
+    private boolean loggedResults;
+    private boolean qaMode;
+    private boolean qaRunning;
+    private int qaPhase;
+    private float qaX;
+    private float qaCheckTimer;
+    private int coverageFail;
+    private float[] qaWidths;
 
     // artifacts
     private enum ArtifactType {
@@ -87,6 +97,14 @@ public class RaceScreen implements Screen {
         Pixmap pm = new Pixmap(1,1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE); pm.fill();
         pixel = new Texture(pm); pm.dispose();
+        Pixmap skyPm = new Pixmap(1,256, Pixmap.Format.RGBA8888);
+        for(int y=0;y<256;y++){
+            float t=y/255f;
+            skyPm.setColor(new Color(0.4f+0.3f*(1-t),0.7f+0.2f*(1-t),1f,1f));
+            skyPm.drawPixel(0,y);
+        }
+        skyTex = new Texture(skyPm); skyPm.dispose();
+        skyTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         camera = new OrthographicCamera(640, 360);
         camera.position.set(320,180,0);
         assetManager = game.getAssetManager();
@@ -116,6 +134,7 @@ public class RaceScreen implements Screen {
         floatPool = new Pool<FloatingText>() { @Override protected FloatingText newObject(){return new FloatingText();} };
         spawnSeed = System.currentTimeMillis();
         spawnArtifacts();
+        qaMode = "1".equals(System.getProperty("QA"));
     }
 
     @Override
@@ -123,10 +142,21 @@ public class RaceScreen implements Screen {
         Gdx.gl.glClearColor(0.1f,0.1f,0.1f,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        if (raceFinished) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F9)) qaMode = !qaMode;
+        if (qaMode) { runQa(delta); return; }
+
+        if (state == RaceState.FINISHED) {
             finishDelay -= delta;
             if (finishDelay < 0f) finishDelay = 0f;
-            if (!transitionLock && finishDelay == 0f) {
+            if (!loggedFinished) { Gdx.app.log("INFO","STATE=FINISHED"); Gdx.app.log("INFO","PARALLAX_ACTIVE=TRUE"); loggedFinished=true; }
+            if (finishDelay == 0f) {
+                state = RaceState.RESULTS;
+                Gdx.app.log("INFO","STATE=RESULTS");
+                Gdx.app.log("INFO","PARALLAX_ACTIVE=TRUE");
+            }
+        } else if (state == RaceState.RESULTS) {
+            if (!loggedResults) { Gdx.app.log("INFO","STATE=RESULTS"); Gdx.app.log("INFO","PARALLAX_ACTIVE=TRUE"); loggedResults=true; }
+            if (!transitionLock) {
                 if (Gdx.input.isKeyJustPressed(Input.Keys.R)) { restartRace(); return; }
                 if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) { exitToSelect(); return; }
             }
@@ -135,10 +165,10 @@ public class RaceScreen implements Screen {
             return;
         }
 
-        if(!started){
+        if (state == RaceState.COUNTDOWN) {
             countdown -= delta;
-            if(countdown<=0){started=true;}
-        } else if(!raceFinished){
+            if (countdown <= 0) { state = RaceState.RUNNING; }
+        } else if (state == RaceState.RUNNING) {
             time += delta;
             playerCtrl.update(delta);
             ai1.update(delta); ai2.update(delta);
@@ -159,6 +189,7 @@ public class RaceScreen implements Screen {
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
+        batch.draw(skyTex, camera.position.x - halfW, 0, camera.viewportWidth, camera.viewportHeight);
         bg.render(batch, camera.position.x, camera.viewportWidth, camera.viewportHeight);
         // ground
         batch.setColor(Color.DARK_GRAY);
@@ -192,7 +223,7 @@ public class RaceScreen implements Screen {
         // HUD
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        if(!started){
+        if(state==RaceState.COUNTDOWN){
             int count = (int)Math.ceil(countdown);
             String msg = count>0?String.valueOf(count):"GO!";
             font.draw(batch,msg,camera.position.x-10,camera.position.y+100);
@@ -204,7 +235,7 @@ public class RaceScreen implements Screen {
         for(int i=0;i<arr.size;i++){
             font.draw(batch,(i+1)+") "+arr.get(i).getName(),camera.position.x-300,y); y-=20;}
         font.draw(batch, "SCORE: " + score, camera.position.x-300, camera.position.y+170);
-        if(raceFinished){
+        if(state==RaceState.RESULTS){
             font.draw(batch,"Ganador: "+winnerName(),camera.position.x-80,camera.position.y+40);
             font.draw(batch,"R para reiniciar, ESC para menu",camera.position.x-120,camera.position.y+20);
         }
@@ -216,7 +247,7 @@ public class RaceScreen implements Screen {
             finishTimes.put(c,time);
             Gdx.app.log("INFO","Finish "+c.getName()+" t="+String.format("%.2f",time));
             if(finishTimes.size()==3){
-                raceFinished=true;
+                state = RaceState.FINISHED;
                 finishDelay = 0.3f;
                 java.util.List<Map.Entry<CharacterBase,Float>> list = new java.util.ArrayList<>(finishTimes.entrySet());
                 list.sort(java.util.Comparator.comparing(Map.Entry::getValue));
@@ -242,6 +273,7 @@ public class RaceScreen implements Screen {
         camera.viewportHeight = height;
         camera.position.set(width/2f, height/2f, 0);
         camera.update();
+        if(bg!=null) bg.resize(camera.viewportWidth, camera.viewportHeight);
     }
     @Override public void pause(){}
     @Override public void resume(){}
@@ -253,11 +285,13 @@ public class RaceScreen implements Screen {
         artifacts.clear();
         floatingTexts.clear();
         if (bg != null) bg.clear();
+        Gdx.app.log("INFO","RaceScreen.hide(): cleared obstacles, artifacts, floatingTexts");
     }
     @Override public void dispose(){
         Timer.instance().clear();
         batch.dispose();
         pixel.dispose();
+        skyTex.dispose();
         font.dispose();
         if (bg != null) bg.dispose();
         player.dispose();
@@ -266,7 +300,7 @@ public class RaceScreen implements Screen {
         artifacts.clear();
         floatingTexts.clear();
         if (bg != null) bg.clear();
-        Gdx.app.log("INFO","RaceScreen.dispose(): stage/world cleared, timers canceled, inputs removed");
+        Gdx.app.log("INFO","RaceScreen.dispose(): cleared obstacles, artifacts, floatingTexts; textures kept in AssetManager");
     }
 
     private void spawnArtifacts(){
@@ -306,6 +340,46 @@ public class RaceScreen implements Screen {
             ft.y += 30f * delta;
             ft.time -= delta;
             if(ft.time<=0){floatingTexts.removeIndex(i); floatPool.free(ft);} }
+    }
+
+    private void runQa(float delta){
+        state = RaceState.RUNNING;
+        if(!qaRunning){
+            qaRunning = true;
+            qaWidths = new float[]{camera.viewportWidth, camera.viewportWidth*1.5f, camera.viewportWidth*0.75f};
+            qaPhase = 0; qaX = 0f; qaCheckTimer = 0f; coverageFail = 0;
+            camera.viewportWidth = qaWidths[qaPhase];
+            camera.update();
+            if(bg!=null) bg.resize(camera.viewportWidth, camera.viewportHeight);
+        }
+        qaX += 400f*delta;
+        camera.position.x = qaX;
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        float halfW = camera.viewportWidth/2f;
+        batch.draw(skyTex, camera.position.x - halfW, 0, camera.viewportWidth, camera.viewportHeight);
+        bg.render(batch, camera.position.x, camera.viewportWidth, camera.viewportHeight);
+        batch.end();
+
+        qaCheckTimer += delta;
+        if(qaCheckTimer >= 0.25f){
+            qaCheckTimer -= 0.25f;
+            if(bg.hasGap()) coverageFail++;
+        }
+
+        if(camera.position.x >= track.getFinishX() + 2000f){
+            Gdx.app.log("INFO","QA width="+camera.viewportWidth+" coverageFail="+coverageFail+" expected=0");
+            qaPhase++;
+            if(qaPhase < qaWidths.length){
+                camera.viewportWidth = qaWidths[qaPhase];
+                camera.update();
+                if(bg!=null) bg.resize(camera.viewportWidth, camera.viewportHeight);
+                qaX = 0f; coverageFail = 0; qaCheckTimer = 0f;
+            }else{
+                qaMode = false; qaRunning = false;
+            }
+        }
     }
 
     private void exitToSelect() {
