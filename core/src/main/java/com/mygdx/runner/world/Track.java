@@ -1,10 +1,6 @@
 package com.mygdx.runner.world;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.utils.Json;
-import com.badlogic.gdx.utils.JsonValue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,38 +9,23 @@ import java.util.List;
  * Defines start/finish and obstacles.
  */
 public class Track {
-    public static final float RACE_LENGTH_PX = 6500f;
-    private float startX = 0f;
-    private float finishX = startX + RACE_LENGTH_PX;
+    public static final float RACE_LENGTH_PX = 4200f;
+    private final float startX = 0f;
+    private final float finishX = startX + RACE_LENGTH_PX;
     private final List<Rectangle> obstacles = new ArrayList<>();
-    private float groundY = 0f;
-    private float npcMin = 160f;
-    private float npcMax = 205f;
+    private final float groundY = 0f;
+    private final float npcMin = 160f;
+    private final float npcMax = 205f;
 
     public Track() {
-        loadConfig();
+        generateObstacles();
     }
 
-    private void loadConfig() {
-        try {
-            FileHandle fh = Gdx.files.internal("config/race_config.json");
-            if (!fh.exists()) return;
-            Json json = new Json();
-            JsonValue root = json.fromJson(null, fh);
-            finishX = root.getFloat("finishX", finishX);
-            npcMin = root.getFloat("npcSpeedMin", npcMin);
-            npcMax = root.getFloat("npcSpeedMax", npcMax);
-            JsonValue obs = root.get("obstacles");
-            if (obs != null) {
-                for (JsonValue o : obs) {
-                    float x = o.getFloat("x");
-                    float w = o.getFloat("width");
-                    float h = o.getFloat("height");
-                    obstacles.add(new Rectangle(x, groundY, w, h));
-                }
-            }
-        } catch (Exception e) {
-            Gdx.app.error("Track", "Failed to load config", e);
+    private void generateObstacles() {
+        // 5 obstacles spaced along the track, avoiding crowding the last third
+        float[] xs = {900f, 1700f, 2400f, 3100f, 3600f};
+        for (float x : xs) {
+            obstacles.add(new Rectangle(x, groundY, 40f, 20f));
         }
     }
 

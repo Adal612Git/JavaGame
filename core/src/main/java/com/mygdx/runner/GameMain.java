@@ -22,7 +22,7 @@ public class GameMain extends Game {
         Gdx.app.log("INFO", "Boot Runner Game");
         loadAssets();
         assetManager.finishLoading();
-        setScreen(new SelectScreen(this));
+        setScreen(new SelectScreen(this, assetManager));
     }
 
     private void loadAssets() {

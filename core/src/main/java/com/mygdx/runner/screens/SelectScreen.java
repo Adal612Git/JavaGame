@@ -1,9 +1,9 @@
 package com.mygdx.runner.screens;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.runner.GameMain;
@@ -24,7 +25,8 @@ import java.util.Map;
  * Simple text based character selection screen.
  */
 public class SelectScreen implements Screen {
-    private final Game game;
+    private final GameMain game;
+    private final AssetManager assetManager;
     private SpriteBatch batch;
     private BitmapFont font;
     private Texture pixel;
@@ -37,9 +39,12 @@ public class SelectScreen implements Screen {
     private int selected;
     private final String[] ids = {"orion", "roky", "thumper"};
     private final String[] names = {"ORION", "ROKY", "THUMPER"};
+    private Stage selectStage;
+    private float debounce;
 
-    public SelectScreen(Game game) {
+    public SelectScreen(GameMain game, AssetManager assetManager) {
         this.game = game;
+        this.assetManager = assetManager;
     }
 
     @Override
@@ -56,9 +61,12 @@ public class SelectScreen implements Screen {
         viewport.apply();
         camera.position.set(320,180,0);
         camera.update();
+        selectStage = new Stage(viewport);
+        Gdx.input.setInputProcessor(selectStage);
         selected = 0;
         loadUiBg();
         updatePreview();
+        debounce = 0f;
     }
 
     @Override
@@ -66,14 +74,19 @@ public class SelectScreen implements Screen {
         Gdx.gl.glClearColor(0,0,0,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) { selected = (selected + 1) % ids.length; updatePreview(); }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) { selected = (selected - 1 + ids.length) % ids.length; updatePreview(); }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            Gdx.app.log("INFO", "Character selected: " + ids[selected]);
-            game.setScreen(new RaceLoadingScreen((GameMain)game, ids[selected]));
-        }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            Gdx.app.exit();
+        if (debounce > 0f) debounce -= delta;
+        if (debounce <= 0f) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) { selected = (selected + 1) % ids.length; updatePreview(); debounce = 0.2f; }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) { selected = (selected - 1 + ids.length) % ids.length; updatePreview(); debounce = 0.2f; }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                Gdx.app.log("INFO", "Character selected: " + ids[selected]);
+                game.setScreen(new RaceLoadingScreen(game, ids[selected]));
+                debounce = 0.2f;
+            }
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                Gdx.app.exit();
+                debounce = 0.2f;
+            }
         }
 
         resolveLoading();
@@ -109,33 +122,35 @@ public class SelectScreen implements Screen {
     @Override public void resize(int width, int height) { viewport.update(width,height,true); }
     @Override public void pause() {}
     @Override public void resume() {}
-    @Override public void hide() {}
+    @Override public void hide() {
+        Gdx.input.setInputProcessor(null);
+        if (selectStage != null) { selectStage.clear(); selectStage.dispose(); selectStage = null; }
+    }
 
     @Override
     public void dispose() {
         batch.dispose();
         font.dispose();
         pixel.dispose();
+        if (selectStage != null) selectStage.dispose();
         // textures managed by AssetManager
     }
 
     private void loadUiBg() {
-        GameMain gm = (GameMain) game;
-        uiBg = gm.getAssetManager().get("assets/images/ui/seleccion_personajes.png", Texture.class);
+        uiBg = assetManager.get("assets/images/ui/seleccion_personajes.png", Texture.class);
         uiBg.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         Gdx.app.log("INFO", "SelectScreen: fondo UI cargado OK");
     }
 
     private void updatePreview() {
         String id = ids[selected];
-        GameMain gm = (GameMain) game;
         if (cache.containsKey(id)) {
             preview = cache.get(id);
             pendingId = null;
         } else {
             String path = "assets/images/personajes/" + id + "/placeholder.png";
-            if (!gm.getAssetManager().isLoaded(path, Texture.class)) {
-                gm.getAssetManager().load(path, Texture.class);
+            if (!assetManager.isLoaded(path, Texture.class)) {
+                assetManager.load(path, Texture.class);
             }
             pendingId = id;
             preview = null;
@@ -145,11 +160,10 @@ public class SelectScreen implements Screen {
 
     private void resolveLoading() {
         if (pendingId == null) return;
-        GameMain gm = (GameMain) game;
-        if (gm.getAssetManager().update()) {
+        if (assetManager.update()) {
             String path = "assets/images/personajes/" + pendingId + "/placeholder.png";
-            if (gm.getAssetManager().isLoaded(path)) {
-                Texture tex = gm.getAssetManager().get(path, Texture.class);
+            if (assetManager.isLoaded(path)) {
+                Texture tex = assetManager.get(path, Texture.class);
                 tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
                 preview = new TextureRegion(tex);
                 cache.put(pendingId, preview);

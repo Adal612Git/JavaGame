@@ -17,33 +17,30 @@ import java.util.Comparator;
  */
 public class ParallaxBackground {
     private static class Layer {
-        final TextureRegion region; final float ratio; double offset; final float w; final float h;
-        Layer(TextureRegion r,float ratio){this.region=r;this.ratio=ratio;this.w=r.getRegionWidth();this.h=r.getRegionHeight();}
+        final TextureRegion region; final float factor; final float w; final float h; final String name; boolean logged;
+        Layer(String name, TextureRegion r, float factor){
+            this.name = name; this.region = r; this.factor = factor;
+            this.w = r.getRegionWidth(); this.h = r.getRegionHeight();
+        }
     }
 
     private final Array<Layer> layers = new Array<>();
-    private final AssetManager am;
     private Texture gradientTex;
 
     public ParallaxBackground(AssetManager am, float viewportW, float viewportH){
-        this.am = am;
-        String base = "assets/escenarios/ecenario_Ralph";
-        FileHandle dir = Gdx.files.internal(base);
-        if(!dir.exists()){ base = "assets/images/escenarios/ecenario_Ralph"; dir = Gdx.files.internal(base); Gdx.app.log("INFO","Escenario fallback: "+base); }
-        Array<FileHandle> files = new Array<>();
-        if(dir.exists()){
-            for(FileHandle f: dir.list("png")) files.add(f);
-            files.sort(Comparator.comparing(FileHandle::name));
-            for(FileHandle f: files){
-                if(!am.isLoaded(f.path(), Texture.class)) continue;
-                Texture tex = am.get(f.path(), Texture.class);
-                tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-                String lower = f.name().toLowerCase();
-                float ratio = lower.contains("fondo")||lower.contains("bg")?0.2f:
-                        lower.contains("mid")||lower.contains("middle")?0.5f:
-                                lower.contains("front")||lower.contains("near")?0.8f:0.5f;
-                layers.add(new Layer(new TextureRegion(tex), ratio));
-            }
+        FileHandle dir = Gdx.files.internal("assets/escenarios/ecenario_Ralph");
+        Array<FileHandle> files = new Array<>(dir.list("png"));
+        files.sort(Comparator.comparing(FileHandle::name));
+        for(FileHandle f: files){
+            if(!am.isLoaded(f.path(), Texture.class)) continue;
+            Texture tex = am.get(f.path(), Texture.class);
+            tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            String lower = f.name().toLowerCase();
+            float factor = lower.contains("fondo")||lower.contains("bg")?0.2f:
+                    lower.contains("mid")||lower.contains("middle")?0.5f:
+                            lower.contains("front")||lower.contains("near")?0.8f:0.5f;
+            layers.add(new Layer(f.name(), new TextureRegion(tex), factor));
+            Gdx.app.log("INFO","Parallax asset: "+f.path());
         }
         if(layers.size==0){
             Pixmap pm = new Pixmap(1,256, Pixmap.Format.RGBA8888);
@@ -54,28 +51,34 @@ public class ParallaxBackground {
             }
             gradientTex = new Texture(pm); pm.dispose();
             gradientTex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            layers.add(new Layer(new TextureRegion(gradientTex),0.2f));
+            layers.add(new Layer("gradient", new TextureRegion(gradientTex),0.2f));
         }
         Gdx.app.log("INFO","ParallaxBackground capas="+layers.size);
     }
 
-    public void update(float camDX){
-        for(Layer l: layers){ l.offset += camDX * l.ratio; }
-    }
-
-    public void render(SpriteBatch batch, float screenW, float screenH){
+    public void render(SpriteBatch batch, float camX, float screenW, float screenH){
         for(Layer l: layers){
             float scale = screenH / l.h;
             float drawW = l.w * scale;
-            double norm = ((l.offset % drawW) + drawW) % drawW;
-            float start = (float)-norm;
-            int tiles = (int)Math.ceil(screenW / drawW) + 2;
-            for(int i=0;i<tiles;i++){
+            double raw = camX * l.factor;
+            float nx = (float)(((raw % drawW) + drawW) % drawW);
+            int tiles = (int)Math.ceil(screenW / drawW) + 3;
+            float start = -nx - drawW;
+            if(!l.logged){
+                if(tiles < 3 || drawW <= 0f){
+                    Gdx.app.log("WARN","layer="+l.name+" wDraw="+drawW+" tiles="+tiles+" factor="+l.factor);
+                }else{
+                    Gdx.app.log("INFO","layer="+l.name+" wDraw="+drawW+" vpw="+screenW+" tiles="+tiles+" factor="+l.factor);
+                }
+                l.logged = true;
+            }
+            for(int i=0;i<tiles+2;i++){
                 batch.draw(l.region, start + i*drawW, 0, drawW, screenH);
             }
         }
     }
 
+    public void clear(){ layers.clear(); }
     public void dispose(){ if(gradientTex!=null) gradientTex.dispose(); }
 }
 

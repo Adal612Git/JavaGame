@@ -61,8 +61,7 @@ public class RaceLoadingScreen implements Screen {
         // scenario layers
         String base="assets/escenarios/ecenario_Ralph";
         com.badlogic.gdx.files.FileHandle dir = Gdx.files.internal(base);
-        if(!dir.exists()){ base="assets/images/escenarios/ecenario_Ralph"; dir=Gdx.files.internal(base); }
-        if(dir.exists()) for(com.badlogic.gdx.files.FileHandle f: dir.list("png")) if(!am.isLoaded(f.path())) am.load(f.path(), Texture.class, param);
+        for(com.badlogic.gdx.files.FileHandle f: dir.list("png")) if(!am.isLoaded(f.path())) am.load(f.path(), Texture.class, param);
         // artifacts
         String[] arts={"caja","escudo","mochila","pistola","trueno","turbo"};
         for(String a:arts){
