@@ -187,9 +187,10 @@ public abstract class Escenario {
             if (e.getTexture() != null) {
                 e.draw(batch);
             } else {
+                Gdx.app.log("Escenario", "WARN textura faltante para " + e.getClass().getSimpleName());
                 batch.end();
                 debugRenderer.setProjectionMatrix(batch.getProjectionMatrix());
-                debugRenderer.begin(ShapeRenderer.ShapeType.Line);
+                debugRenderer.begin(ShapeRenderer.ShapeType.Filled);
                 debugRenderer.setColor(Color.RED);
                 Rectangle b = e.getBounds();
                 debugRenderer.rect(b.x, b.y, b.width, b.height);
