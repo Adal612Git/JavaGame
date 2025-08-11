@@ -64,7 +64,7 @@ public abstract class Personaje {
                 Animation<TextureRegion> clone =
                         new Animation<>(idleAnim.getFrameDuration(), idleAnim.getKeyFrames());
                 anims.put(Estado.RUN, clone);
-                Gdx.app.log("[[RUN-FIX]]", "Assigned IDLE anim to RUN (frames=" + idleAnim.getKeyFrames().length + ")");
+                Gdx.app.log("WARN", "Missing frames for RUN in " + nombre + ". Using fallback from IDLE.");
             }
         }
     }
@@ -209,12 +209,12 @@ public abstract class Personaje {
             }
         }
         if (anim == null || anim.getKeyFrames().length == 0) {
-            Gdx.app.log("WARN", "Attempted to draw null texture for " + estado + "/" + id + ". Skipping.");
+            Gdx.app.log("WARN", "Attempted to draw null texture for " + nombre + "/" + estado + ". Skipping.");
             return;
         }
         TextureRegion frame = anim.getKeyFrame(stateTime, true);
         if (frame == null || frame.getTexture() == null) {
-            Gdx.app.log("WARN", "Attempted to draw null texture for " + estado + "/" + id + ". Skipping.");
+            Gdx.app.log("WARN", "Attempted to draw null texture for " + nombre + "/" + estado + ". Skipping.");
             return;
         }
         boolean flip = dir == Direccion.LEFT;
