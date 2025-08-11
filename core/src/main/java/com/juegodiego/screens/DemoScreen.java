@@ -150,8 +150,11 @@ public class DemoScreen implements Screen {
             if (logTimer >= 0.5f) {
                 logTimer = 0f;
                 Vector2 p = personaje.getPosition();
-                Gdx.app.log("[RENDER]", String.format("pos=(%.1f,%.1f) dir=%s state=%s cam=(%.1f,%.1f) vp=(%.1f,%.1f)",
-                        p.x, p.y, personaje.getDir(), personaje.getEstado(),
+                Gdx.app.log("[[RENDER]]", String.format(
+                        "state=%s draw=(%.1f,%.1f,%.1f,%.1f) frameWH=(%.0f,%.0f) cam=(%.1f,%.1f) vp=(%.1f,%.1f)",
+                        personaje.getEstado(), p.x, p.y,
+                        personaje.getLastDrawWidth(), personaje.getLastDrawHeight(),
+                        personaje.getLastFrameWidth(), personaje.getLastFrameHeight(),
                         camera.position.x, camera.position.y,
                         camera.viewportWidth, camera.viewportHeight));
             }
