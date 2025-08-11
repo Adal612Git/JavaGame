@@ -53,6 +53,15 @@ public abstract class Personaje {
         this.position.set(spawn);
     }
 
+    protected void ensureRunAnim() {
+        Animation<TextureRegion> runAnim = anims.get(Estado.RUN);
+        Animation<TextureRegion> idleAnim = anims.get(Estado.IDLE);
+        if ((runAnim == null || runAnim.getKeyFrames().length == 0) && idleAnim != null) {
+            anims.put(Estado.RUN, idleAnim);
+            Gdx.app.log("[[RUN-FIX]]", "Assigned IDLE anim to RUN (frames=" + idleAnim.getKeyFrames().length + ")");
+        }
+    }
+
     public void update(float delta) {
         handleInput(delta);
         updateCooldowns(delta);
@@ -177,9 +186,13 @@ public abstract class Personaje {
 
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
-        if (estado == Estado.RUN && (anim == null || anim.getKeyFrames().length == 0)) {
-            Gdx.app.log("[[RENDER]]", "RUN anim missing → using IDLE");
-            anim = anims.get(Estado.IDLE);
+        if (estado == Estado.RUN) {
+            Animation<TextureRegion> runAnim = anim;
+            if (runAnim == null || runAnim.getKeyFrames().length == 0) {
+                runAnim = anims.get(Estado.IDLE);
+                Gdx.app.log("[[RENDER]]", "RUN empty → drawing IDLE");
+            }
+            anim = runAnim;
         } else if (anim == null) {
             anim = anims.get(Estado.IDLE);
         }

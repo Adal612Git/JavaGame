@@ -108,7 +108,7 @@ public class AnimationLoader {
                 loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(st, paths);
                 String sample = paths.first();
                 if (st == Estado.RUN) {
-                    Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + matches.size + " sample=" + sample);
+                    Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + matches.size + " source=std-path");
                 } else {
                     Gdx.app.log("[[" + personaje + "]]", "FOUND " + st + " frames=" + matches.size + " sample=" + sample);
                 }
@@ -116,6 +116,7 @@ public class AnimationLoader {
             } else {
                 if (st == Estado.RUN) {
                     Gdx.app.log("[[LOADER]]", "RUN MISSING @ " + dirPath + " (dir exists=" + dirExists + ")");
+                    Gdx.app.log("[[LOADER]]", "RUN FOUND frames=0 source=std-path");
                 } else {
                     Gdx.app.log("[[" + personaje + "]]", "MISSING " + st + " @ " + dirPath + " (dir exists=" + dirExists + ")");
                 }
@@ -167,12 +168,21 @@ public class AnimationLoader {
                 }
                 map.put(Estado.RUN, new Animation<>(RUN_SPEED, frames));
                 loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.RUN, paths);
-                String sample = paths.first();
-                Gdx.app.log("[[LOADER]]", "RUN FALLBACK frames=" + files.length + " sample=" + sample);
-                diag.record(personaje, Estado.RUN, "FALLBACK", files.length, sample);
+                Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + files.length + " source=speedpaws");
+                diag.record(personaje, Estado.RUN, "FALLBACK", files.length, paths.first());
             } else {
                 Gdx.app.log("[[LOADER]]", "RUN MISSING @ " + fbDir + " (dir exists=" + dirExists + ")");
+                Gdx.app.log("[[LOADER]]", "RUN FOUND frames=0 source=speedpaws");
             }
+        }
+
+        // Fallback RUN desde IDLE si aún falta
+        if (!map.containsKey(Estado.RUN) && map.containsKey(Estado.IDLE)) {
+            Animation<TextureRegion> idleAnim = map.get(Estado.IDLE);
+            map.put(Estado.RUN, idleAnim);
+            Gdx.app.log("[[LOADER]]", "RUN missing → using IDLE as fallback");
+            Gdx.app.log("[[LOADER]]", "RUN FOUND frames=0 → fallback=IDLE frames=" + idleAnim.getKeyFrames().length);
+            diag.record(personaje, Estado.RUN, "IDLE_FALLBACK", idleAnim.getKeyFrames().length, "from IDLE");
         }
 
         // Fallback IDLE desde RUN
@@ -280,12 +290,10 @@ public class AnimationLoader {
 
         // Final fallback
         for (Estado st : Estado.values()) {
+            if (st == Estado.RUN) continue;
             if (!map.containsKey(st)) {
                 Color color;
                 switch (st) {
-                    case RUN:
-                        color = Color.BLUE;
-                        break;
                     case JUMP:
                         color = Color.YELLOW;
                         break;
@@ -317,12 +325,17 @@ public class AnimationLoader {
                 paths.add("solid-color");
                 loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(st, paths);
                 diag.record(personaje, st, "FINAL_FALLBACK", 1, "solid-color");
-                if (st == Estado.RUN) {
-                    Gdx.app.log("[[LOADER]]", "RUN FINAL_FALLBACK");
-                } else {
-                    Gdx.app.log("[[" + personaje + "]]", "FINAL_FALLBACK " + st);
-                }
+                Gdx.app.log("[[" + personaje + "]]", "FINAL_FALLBACK " + st);
             }
+        }
+
+        // Último intento de asignar RUN desde IDLE si sigue faltando
+        if (!map.containsKey(Estado.RUN) && map.containsKey(Estado.IDLE)) {
+            Animation<TextureRegion> idleAnim = map.get(Estado.IDLE);
+            map.put(Estado.RUN, idleAnim);
+            Gdx.app.log("[[LOADER]]", "RUN missing → using IDLE as fallback");
+            Gdx.app.log("[[LOADER]]", "RUN FOUND frames=0 → fallback=IDLE frames=" + idleAnim.getKeyFrames().length);
+            diag.record(personaje, Estado.RUN, "IDLE_FALLBACK", idleAnim.getKeyFrames().length, "from IDLE");
         }
 
         return map;
