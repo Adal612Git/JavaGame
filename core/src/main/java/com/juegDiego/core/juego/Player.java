@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 
@@ -22,6 +23,7 @@ public class Player {
     public Player(float x, float y) {
         this.position.set(x, y);
         this.texture = new Texture("images/personajes/orion/placeholder.png");
+        this.texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
         updateBounds();
     }
 
@@ -53,6 +55,13 @@ public class Player {
     }
 
     public void draw(SpriteBatch batch) {
+        Color old = batch.getColor();
+        batch.setColor(0.25f, 0.10f, 0.35f, 0.6f);
+        batch.draw(texture, position.x - 1f, position.y, 64, 64);
+        batch.draw(texture, position.x + 1f, position.y, 64, 64);
+        batch.draw(texture, position.x, position.y - 1f, 64, 64);
+        batch.draw(texture, position.x, position.y + 1f, 64, 64);
+        batch.setColor(old);
         batch.draw(texture, position.x, position.y, 64, 64);
     }
 

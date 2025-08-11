@@ -171,7 +171,9 @@ public abstract class Escenario {
         if (!textures.containsKey(path)) {
             FileHandle fh = Gdx.files.internal(path);
             if (fh.exists()) {
-                textures.put(path, new Texture(fh));
+                Texture tex = new Texture(fh);
+                tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                textures.put(path, tex);
             } else {
                 Gdx.app.log("Escenario", "WARN textura no encontrada: " + path);
                 textures.put(path, null);
