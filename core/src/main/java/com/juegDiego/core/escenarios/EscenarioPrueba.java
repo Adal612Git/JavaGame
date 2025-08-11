@@ -21,6 +21,7 @@ public class EscenarioPrueba extends Escenario {
     private final ShapeRenderer bgDebug = new ShapeRenderer();
 
     public EscenarioPrueba() {
+        Gdx.app.log("Escenario", "Resolving background: images/escenarios/ecenario_Ralph/ecenario_Ralph-01.png");
         fondo = getTexture("images/escenarios/ecenario_Ralph/ecenario_Ralph-01.png");
         if (fondo != null) fondo.setFilter(TextureFilter.Linear, TextureFilter.Linear);
         plataformaTx = getTexture("images/escenarios/ecenario_Ralph/ecenario_Ralph-02.png");

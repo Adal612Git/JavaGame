@@ -32,8 +32,8 @@ public class GameScreen implements Screen {
     private OrthographicCamera camera;
     private FitViewport viewport;
 
-    private Escenario escenario;
-    private Personaje player;
+    private final Escenario escenario;
+    private final Personaje player;
     private int score;
     private float damageCooldown;
     private final Random rng = new Random();
@@ -41,9 +41,10 @@ public class GameScreen implements Screen {
     private Texture overlayTexture;
     private ShaderProgram playerShader;
 
-    public GameScreen(Game game, Personaje player) {
+    public GameScreen(Game game, Personaje player, Escenario escenario) {
         this.game = game;
         this.player = player;
+        this.escenario = escenario;
     }
 
     @Override
@@ -53,8 +54,6 @@ public class GameScreen implements Screen {
         viewport = new FitViewport(WORLD_W, WORLD_H, camera);
         viewport.apply();
         camera.position.set(WORLD_W / 2f, WORLD_H / 2f, 0);
-        escenario = Escenario.crearEscenarioPrueba();
-        player.getPosition().set(50, 200);
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE);
@@ -148,6 +147,8 @@ public class GameScreen implements Screen {
             return;
         }
 
+        Gdx.app.log("DEBUG", "Player state=" + player.getEstado() + " grounded=" + player.isOnGround() +
+                " pos=(" + player.getPosition().x + "," + player.getPosition().y + ")");
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();

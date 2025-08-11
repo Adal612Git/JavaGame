@@ -202,17 +202,21 @@ public abstract class Personaje {
 
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
-        if (estado == Estado.RUN) {
-            Animation<TextureRegion> runAnim = anim;
-            if (runAnim == null || runAnim.getKeyFrames().length == 0) {
-                runAnim = anims.get(Estado.IDLE);
-                Gdx.app.log("[[RENDER]]", "RUN empty → drawing IDLE");
-            }
-            anim = runAnim;
-        } else if (anim == null) {
+        if (estado == Estado.RUN && (anim == null || anim.getKeyFrames().length == 0)) {
             anim = anims.get(Estado.IDLE);
+            if (anim != null) {
+                Gdx.app.log("WARN", "Missing frames for RUN in " + nombre + ". Using IDLE as fallback.");
+            }
+        }
+        if (anim == null || anim.getKeyFrames().length == 0) {
+            Gdx.app.log("WARN", "Attempted to draw null texture for " + estado + "/" + id + ". Skipping.");
+            return;
         }
         TextureRegion frame = anim.getKeyFrame(stateTime, true);
+        if (frame == null || frame.getTexture() == null) {
+            Gdx.app.log("WARN", "Attempted to draw null texture for " + estado + "/" + id + ". Skipping.");
+            return;
+        }
         boolean flip = dir == Direccion.LEFT;
         if (frame.isFlipX() != flip) {
             frame.flip(true, false);
@@ -264,6 +268,10 @@ public abstract class Personaje {
     public void setSpeed(float s) { this.speed = s; }
 
     public String getNombre() { return nombre; }
+
+    public String getId() { return id; }
+
+    public boolean isOnGround() { return onGround; }
 
     public float getLastDrawWidth() { return lastDrawW; }
     public float getLastDrawHeight() { return lastDrawH; }
