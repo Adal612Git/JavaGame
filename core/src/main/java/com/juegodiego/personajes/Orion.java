@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
 import com.juegodiego.gfx.AnimationLoader;
+import com.juegodiego.gfx.GdxDiagnostics;
 
 /**
  * Orion, personaje ágil con dash.
@@ -13,9 +14,9 @@ public class Orion extends Personaje {
     private boolean dashing;
     private float dashTimer;
 
-    public Orion(AssetManager manager, Vector2 spawn) {
+    public Orion(AssetManager manager, Vector2 spawn, GdxDiagnostics diag) {
         super("orion", "Orion", manager, spawn);
-        anims.putAll(AnimationLoader.loadFor("orion", manager));
+        anims.putAll(AnimationLoader.loadFor("orion", manager, diag));
         speed = 260f;
         jumpForce = 520f;
         attackPower = 10;

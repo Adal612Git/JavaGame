@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
 import com.juegodiego.gfx.AnimationLoader;
+import com.juegodiego.gfx.GdxDiagnostics;
 
 /**
  * Thumper con doble salto.
@@ -12,9 +13,9 @@ import com.juegodiego.gfx.AnimationLoader;
 public class Thumper extends Personaje {
     private boolean doubleUsed;
 
-    public Thumper(AssetManager manager, Vector2 spawn) {
+    public Thumper(AssetManager manager, Vector2 spawn, GdxDiagnostics diag) {
         super("thumper", "Thumper", manager, spawn);
-        anims.putAll(AnimationLoader.loadFor("thumper", manager));
+        anims.putAll(AnimationLoader.loadFor("thumper", manager, diag));
         speed = 240f;
         jumpForce = 520f;
         attackPower = 12;

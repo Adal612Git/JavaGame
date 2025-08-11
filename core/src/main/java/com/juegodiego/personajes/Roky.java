@@ -5,6 +5,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
 import com.juegodiego.gfx.AnimationLoader;
+import com.juegodiego.gfx.GdxDiagnostics;
 
 /**
  * Roky, tanque con guardia.
@@ -13,9 +14,9 @@ public class Roky extends Personaje {
     private boolean guarding;
     private float guardTimer;
 
-    public Roky(AssetManager manager, Vector2 spawn) {
+    public Roky(AssetManager manager, Vector2 spawn, GdxDiagnostics diag) {
         super("roky", "Roky", manager, spawn);
-        anims.putAll(AnimationLoader.loadFor("roky", manager));
+        anims.putAll(AnimationLoader.loadFor("roky", manager, diag));
         speed = 190f;
         jumpForce = 480f;
         attackPower = 14;
