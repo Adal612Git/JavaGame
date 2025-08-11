@@ -16,7 +16,6 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Pool;
 import com.badlogic.gdx.utils.Timer;
-import com.badlogic.gdx.math.MathUtils;
 import com.mygdx.runner.GameMain;
 import com.mygdx.runner.characters.AiController;
 import com.mygdx.runner.characters.CharacterBase;
@@ -74,8 +73,7 @@ public class RaceScreen implements Screen {
     private boolean transitionLock;
     private float finishDelay;
     private long spawnSeed;
-    private Timer.Task escTask;
-    private float prevCamX;
+    private AssetManager assetManager;
 
     public RaceScreen(GameMain game, String playerId) {
         this.game = game;
@@ -91,16 +89,16 @@ public class RaceScreen implements Screen {
         pixel = new Texture(pm); pm.dispose();
         camera = new OrthographicCamera(640, 360);
         camera.position.set(320,180,0);
-        AssetManager am = game.getAssetManager();
-        bg = new ParallaxBackground(am, camera.viewportWidth, camera.viewportHeight);
+        assetManager = game.getAssetManager();
+        bg = new ParallaxBackground(assetManager, camera.viewportWidth, camera.viewportHeight);
         track = new Track();
         // characters
-        player = new CharacterBase(playerId, 0, am, 190f, 6f);
+        player = new CharacterBase(playerId, 0, assetManager, 190f, 6f);
         String[] all = {"orion","roky","thumper"};
         java.util.List<String> npcs = new java.util.ArrayList<>();
         for(String s: all) if(!s.equals(playerId)) npcs.add(s);
-        npc1 = new CharacterBase(npcs.get(0), -40, am, 205f, 6f);
-        npc2 = new CharacterBase(npcs.get(1), -80, am, 205f, 6f);
+        npc1 = new CharacterBase(npcs.get(0), -40, assetManager, 205f, 6f);
+        npc2 = new CharacterBase(npcs.get(1), -80, assetManager, 205f, 6f);
         playerCtrl = new PlayerController(player);
         ai1 = new AiController(npc1, track, track.getNpcMin(), track.getNpcMax());
         ai2 = new AiController(npc2, track, track.getNpcMin(), track.getNpcMax());
@@ -108,7 +106,7 @@ public class RaceScreen implements Screen {
         // artifacts
         artRegions = new java.util.EnumMap<>(ArtifactType.class);
         for (ArtifactType t : ArtifactType.values()) {
-            Texture tex = am.get("assets/images/artefactos/" + t.file + ".png", Texture.class);
+            Texture tex = assetManager.get("assets/images/artefactos/" + t.file + ".png", Texture.class);
             tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
             artRegions.put(t, new TextureRegion(tex));
         }
@@ -118,7 +116,6 @@ public class RaceScreen implements Screen {
         floatPool = new Pool<FloatingText>() { @Override protected FloatingText newObject(){return new FloatingText();} };
         spawnSeed = System.currentTimeMillis();
         spawnArtifacts();
-        prevCamX = camera.position.x;
     }
 
     @Override
@@ -130,25 +127,12 @@ public class RaceScreen implements Screen {
             finishDelay -= delta;
             if (finishDelay < 0f) finishDelay = 0f;
             if (!transitionLock && finishDelay == 0f) {
-                if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-                    transitionLock = true;
-                    escTask = Timer.schedule(new Timer.Task(){@Override public void run(){game.setScreen(new RaceScreen(game, playerId));}},0.15f);
-                    return;
-                }
-                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                    transitionLock = true;
-                    Gdx.input.setInputProcessor(null);
-                    escTask = Timer.schedule(new Timer.Task(){@Override public void run(){game.setScreen(new SelectScreen(game));}},0.15f);
-                    return;
-                }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.R)) { restartRace(); return; }
+                if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) { exitToSelect(); return; }
             }
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            if(!transitionLock){
-                transitionLock = true;
-                Gdx.input.setInputProcessor(null);
-                escTask = Timer.schedule(new Timer.Task(){@Override public void run(){game.setScreen(new SelectScreen(game));}},0.15f);
-                return;
-            }
+        } else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && !transitionLock) {
+            exitToSelect();
+            return;
         }
 
         if(!started){
@@ -171,14 +155,11 @@ public class RaceScreen implements Screen {
         float halfW = camera.viewportWidth / 2f;
         if(camera.position.x < halfW) camera.position.x = halfW;
         if(camera.position.x > track.getFinishX()) camera.position.x = track.getFinishX();
-        float camDelta = camera.position.x - prevCamX;
-        prevCamX = camera.position.x;
         camera.update();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        bg.update(camDelta);
-        bg.render(batch, camera.viewportWidth, camera.viewportHeight);
+        bg.render(batch, camera.position.x, camera.viewportWidth, camera.viewportHeight);
         // ground
         batch.setColor(Color.DARK_GRAY);
         batch.draw(pixel, camera.position.x - halfW, track.getGroundY()-5, camera.viewportWidth,5);
@@ -266,36 +247,40 @@ public class RaceScreen implements Screen {
     @Override public void resume(){}
     @Override
     public void hide(){
-        if(escTask!=null) escTask.cancel();
+        Timer.instance().clear();
         Gdx.input.setInputProcessor(null);
+        track.getObstacles().clear();
         artifacts.clear();
         floatingTexts.clear();
+        if (bg != null) bg.clear();
     }
     @Override public void dispose(){
+        Timer.instance().clear();
         batch.dispose();
         pixel.dispose();
         font.dispose();
-        bg.dispose();
+        if (bg != null) bg.dispose();
         player.dispose();
         npc1.dispose();
         npc2.dispose();
         artifacts.clear();
         floatingTexts.clear();
+        if (bg != null) bg.clear();
         Gdx.app.log("INFO","RaceScreen.dispose(): stage/world cleared, timers canceled, inputs removed");
     }
 
     private void spawnArtifacts(){
         java.util.Random rng = new java.util.Random(spawnSeed);
-        float x = 600f;
+        float x = 500f;
         int idx = 0;
-        while(x < track.getFinishX() - 500f){
+        while (x < track.getFinishX() - 400f && idx < 6) {
             ArtifactType t = ArtifactType.values()[idx % ArtifactType.values().length];
             Artifact a = artifactPool.obtain();
             a.type = t; a.points = t.points; a.region = artRegions.get(t);
             a.width = 32f; a.height = 32f; a.x = x; a.y = track.getGroundY() + (idx %2==0?10f:60f);
-            a.bounds.set(a.x, a.y, a.width, a.height); a.active=true;
+            a.bounds.set(a.x, a.y, a.width, a.height); a.active = true;
             artifacts.add(a);
-            x += 900f + rng.nextFloat()*200f; // 900-1100
+            x += 700f + rng.nextFloat()*250f; // 700-950
             idx++;
         }
         Gdx.app.log("INFO","Artifacts: spawned " + artifacts.size + " items, seed=" + spawnSeed);
@@ -321,5 +306,23 @@ public class RaceScreen implements Screen {
             ft.y += 30f * delta;
             ft.time -= delta;
             if(ft.time<=0){floatingTexts.removeIndex(i); floatPool.free(ft);} }
+    }
+
+    private void exitToSelect() {
+        transitionLock = true;
+        Gdx.input.setInputProcessor(null);
+        Timer.instance().clear();
+        artifacts.clear();
+        floatingTexts.clear();
+        Gdx.app.postRunnable(() -> game.setScreen(new SelectScreen(game, assetManager)));
+    }
+
+    private void restartRace() {
+        transitionLock = true;
+        Gdx.input.setInputProcessor(null);
+        Timer.instance().clear();
+        artifacts.clear();
+        floatingTexts.clear();
+        Gdx.app.postRunnable(() -> game.setScreen(new RaceScreen(game, playerId)));
     }
 }
