@@ -13,7 +13,7 @@ import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.juegDiego.core.juego.Artefacto;
-import com.juegDiego.core.juego.Player;
+import com.juegodiego.personajes.Personaje;
 
 import java.io.FileNotFoundException;
 import java.util.Random;
@@ -28,8 +28,8 @@ public abstract class Escenario {
     protected final Array<CajaArmas> cajasArmas = new Array<>();
     protected Clima clima = Clima.SOLEADO;
 
-    private final ObjectMap<Player, Float> boostTimers = new ObjectMap<>();
-    private final ObjectMap<Player, Float> baseSpeeds = new ObjectMap<>();
+    private final ObjectMap<Personaje, Float> boostTimers = new ObjectMap<>();
+    private final ObjectMap<Personaje, Float> baseSpeeds = new ObjectMap<>();
     protected final Texture pixelBlanco;
     private final ShapeRenderer debugRenderer = new ShapeRenderer();
     private final ObjectMap<String, Texture> textures = new ObjectMap<>();
@@ -99,18 +99,18 @@ public abstract class Escenario {
         for (Obstaculo o : obstaculos) o.update(delta);
         for (CajaArmas c : cajasArmas) c.update(delta);
 
-        Array<Player> toRemove = new Array<>();
-        for (ObjectMap.Entry<Player, Float> e : boostTimers) {
+        Array<Personaje> toRemove = new Array<>();
+        for (ObjectMap.Entry<Personaje, Float> e : boostTimers) {
             float time = e.value - delta;
             if (time <= 0) {
-                Player p = e.key;
+                Personaje p = e.key;
                 p.setSpeed(baseSpeeds.get(p));
                 toRemove.add(p);
             } else {
                 boostTimers.put(e.key, time);
             }
         }
-        for (Player p : toRemove) {
+        for (Personaje p : toRemove) {
             boostTimers.remove(p);
             baseSpeeds.remove(p);
         }
@@ -141,7 +141,7 @@ public abstract class Escenario {
     /**
      * Aplica un aumento temporal de velocidad al jugador.
      */
-    public void rampaVelocidad(Player player, float factor, float duracionSeg) {
+    public void rampaVelocidad(Personaje player, float factor, float duracionSeg) {
         if (!baseSpeeds.containsKey(player)) {
             baseSpeeds.put(player, player.getSpeed());
         }
@@ -157,13 +157,17 @@ public abstract class Escenario {
         return values[rng.nextInt(values.length)];
     }
 
-    public boolean intersectaPlayer(ElementoEscenario elemento, Player player) {
+    public boolean intersectaPersonaje(ElementoEscenario elemento, Personaje player) {
         return elemento.getBounds().overlaps(player.getBounds());
     }
 
     public Array<Trampolin> getTrampolines() {
         return trampolines;
     }
+
+    public Array<CajaArmas> getCajasArmas() { return cajasArmas; }
+
+    public Array<Obstaculo> getObstaculos() { return obstaculos; }
 
     protected abstract void onPostCargar();
 
