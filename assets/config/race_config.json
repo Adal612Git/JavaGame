@@ -1,11 +1,14 @@
 {
-  "finishX": 2000,
-  "npcSpeedMin": 220,
-  "npcSpeedMax": 260,
+  "finishX": 9000,
+  "npcSpeedMin": 160,
+  "npcSpeedMax": 210,
   "obstacles": [
-    {"x":400, "width":40, "height":20},
-    {"x":800, "width":40, "height":20},
-    {"x":1200, "width":40, "height":20},
-    {"x":1600, "width":40, "height":20}
+    {"x":1000, "width":40, "height":20},
+    {"x":2000, "width":40, "height":20},
+    {"x":3000, "width":40, "height":20},
+    {"x":4500, "width":40, "height":20},
+    {"x":6000, "width":40, "height":20},
+    {"x":7500, "width":40, "height":20},
+    {"x":8200, "width":40, "height":20}
   ]
 }

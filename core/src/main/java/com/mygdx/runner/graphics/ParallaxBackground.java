@@ -1,6 +1,7 @@
 package com.mygdx.runner.graphics;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -18,9 +19,10 @@ public class ParallaxBackground {
         Layer(TextureRegion r, float s){region=r;ratio=s;}
     }
     private final Array<Layer> layers = new Array<>();
-    private final Array<Texture> textures = new Array<>();
+    private final AssetManager assetManager;
 
-    public ParallaxBackground() {
+    public ParallaxBackground(AssetManager am) {
+        this.assetManager = am;
         String base = "assets/escenarios/ecenario_Ralph";
         FileHandle dir = Gdx.files.internal(base);
         if (!dir.exists()) {
@@ -39,9 +41,8 @@ public class ParallaxBackground {
         float[] defaults = {0.2f, 0.5f, 0.8f};
         int idx = 0;
         for (FileHandle f : sorted) {
-            Texture tex = new Texture(f);
+            Texture tex = assetManager.get(f.path(), Texture.class);
             tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            textures.add(tex);
             String lower = f.name().toLowerCase();
             float ratio;
             if (lower.contains("fondo") || lower.contains("bg")) ratio = 0.2f;
@@ -70,6 +71,6 @@ public class ParallaxBackground {
     }
 
     public void dispose() {
-        for (Texture t : textures) t.dispose();
+        // textures managed by AssetManager
     }
 }

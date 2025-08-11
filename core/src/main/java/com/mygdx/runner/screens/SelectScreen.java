@@ -4,24 +4,17 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.runner.GameMain;
-import com.mygdx.runner.graphics.AnimationLoader;
-import com.mygdx.runner.characters.State;
-
-import java.util.Arrays;
-import java.util.Comparator;
 
 /**
  * Simple text based character selection screen.
@@ -33,7 +26,6 @@ public class SelectScreen implements Screen {
     private Texture pixel;
     private Texture uiBg;
     private TextureRegion preview;
-    private AnimationLoader.Result previewData;
     private OrthographicCamera camera;
     private Viewport viewport;
     private int selected;
@@ -113,52 +105,21 @@ public class SelectScreen implements Screen {
         batch.dispose();
         font.dispose();
         pixel.dispose();
-        if (uiBg != null) uiBg.dispose();
-        if (previewData != null) {
-            for (Texture t : previewData.textures) t.dispose();
-        }
+        // textures managed by AssetManager
     }
 
     private void loadUiBg() {
-        FileHandle fh = Gdx.files.internal("assets/images/ui/seleccion_personajes.png");
-        if (!fh.exists()) fh = Gdx.files.internal("assets/ui/seleccion_personajes.png");
-        if (fh.exists()) {
-            uiBg = new Texture(fh);
-            uiBg.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-            Gdx.app.log("INFO", "SelectScreen: fondo UI cargado OK");
-        } else {
-            Gdx.app.log("WARN", "SelectScreen: fondo UI no encontrado");
-        }
-    }
-
-    private String firstFramePath(String id, String state) {
-        String dirPath = "assets/images/personajes/" + id + "/" + state;
-        FileHandle dir = Gdx.files.internal(dirPath);
-        if (dir.exists() && dir.isDirectory()) {
-            FileHandle[] files = dir.list("png");
-            Arrays.sort(files, Comparator.comparing(FileHandle::name));
-            if (files.length > 0) return files[0].path();
-        }
-        return null;
+        GameMain gm = (GameMain) game;
+        uiBg = gm.getAssetManager().get("assets/images/ui/seleccion_personajes.png", Texture.class);
+        uiBg.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        Gdx.app.log("INFO", "SelectScreen: fondo UI cargado OK");
     }
 
     private void updatePreview() {
-        if (previewData != null) {
-            for (Texture t : previewData.textures) t.dispose();
-        }
         String id = ids[selected];
-        previewData = AnimationLoader.load(id);
-        Animation<TextureRegion> anim = previewData.animations.get(State.IDLE);
-        String path = firstFramePath(id, "idle");
-        if (anim == null || path == null) {
-            anim = previewData.animations.get(State.RUN);
-            path = firstFramePath(id, "run");
-        }
-        if (anim == null || path == null) {
-            path = "assets/images/personajes/" + id + "/placeholder.png";
-            anim = previewData.animations.get(State.IDLE);
-        }
-        preview = anim != null ? anim.getKeyFrames()[0] : null;
-        Gdx.app.log("INFO", "SelectScreen preview: " + path);
+        GameMain gm = (GameMain) game;
+        Texture tex = gm.getAssetManager().get("assets/images/personajes/" + id + "/placeholder.png", Texture.class);
+        preview = new TextureRegion(tex);
+        Gdx.app.log("INFO", "SelectScreen preview: " + id);
     }
 }
