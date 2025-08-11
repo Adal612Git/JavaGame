@@ -8,6 +8,9 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.juegDiego.core.escenarios.Escenario;
+import com.juegDiego.core.escenarios.Trampolin;
+import com.juegDiego.core.juego.Player;
 
 public class GameScreen implements Screen {
 
@@ -21,6 +24,9 @@ public class GameScreen implements Screen {
     private Texture caja;
     private Texture escudo;
     private BitmapFont font;
+
+    private Escenario escenario;
+    private Player player;
 
     public GameScreen(Game game) {
         this.game = game;
@@ -37,6 +43,9 @@ public class GameScreen implements Screen {
         escudo = new Texture("images/artefactos/escudo.png");
         font = new BitmapFont();
         font.getData().setScale(1.2f);
+
+        escenario = Escenario.crearEscenarioPrueba();
+        player = new Player(50, 200);
     }
 
     @Override
@@ -44,8 +53,20 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        player.update(delta);
+        escenario.actualizar(delta);
+
+        for (Trampolin t : escenario.getTrampolines()) {
+            if (escenario.intersectaPlayer(t, player)) {
+                player.getVelocity().y = t.getImpulsoY();
+                escenario.rampaVelocidad(player, 1.5f, 2f);
+            }
+        }
+
         batch.begin();
         batch.draw(fondo, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        escenario.dibujar(batch);
+        player.draw(batch);
         batch.draw(orion, 32, 32, 96, 96);
         batch.draw(roky, 160, 32, 96, 96);
         batch.draw(thumper, 288, 32, 96, 96);

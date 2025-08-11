@@ -18,6 +18,7 @@ project(':core') {
 
     dependencies {
         implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+        testImplementation 'junit:junit:4.13.2'
     }
 }
 
