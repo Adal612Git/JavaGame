@@ -1,11 +1,11 @@
 package com.juegDiego.game;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.Game;
 
-public class JavaGame extends ApplicationAdapter {
+public class JavaGame extends Game {
     @Override
-    public void render() {
-        ScreenUtils.clear(0.2f, 0.2f, 0.5f, 1f);
+    public void create() {
+        setScreen(new GameScreen(this));
     }
 }
+
