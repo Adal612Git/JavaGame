@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.juegodiego.Const;
+import java.util.EnumMap;
 
 /**
  * Clase base de personajes.
@@ -30,7 +31,7 @@ public abstract class Personaje {
     protected Direccion dir = Direccion.RIGHT;
     protected Estado estado = Estado.IDLE;
     protected final ObjectMap<String, Float> cooldowns = new ObjectMap<>();
-    protected final ObjectMap<Estado, Animation<TextureRegion>> anims = new ObjectMap<>();
+    protected final EnumMap<Estado, Animation<TextureRegion>> anims = new EnumMap<>(Estado.class);
     public boolean debugDrawHitbox;
     protected final AssetManager manager;
 
@@ -155,13 +156,21 @@ public abstract class Personaje {
 
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
-        if (anim == null) return;
+        if (anim == null) {
+            anim = anims.get(Estado.IDLE);
+        }
         TextureRegion frame = anim.getKeyFrame(stateTime, true);
         boolean flip = dir == Direccion.LEFT;
         if (frame.isFlipX() != flip) {
             frame.flip(true, false);
         }
-        batch.draw(frame, position.x, position.y);
+        float drawHeight = Const.TARGET_SPRITE_HEIGHT;
+        float drawWidth = frame.getRegionWidth() * (drawHeight / frame.getRegionHeight());
+        batch.draw(frame, position.x, position.y, drawWidth, drawHeight);
+    }
+
+    public Estado getEstado() {
+        return estado;
     }
 
     public void renderDebug(ShapeRenderer shape) {
