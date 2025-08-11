@@ -113,8 +113,8 @@ public class CharacterBase {
         TextureRegion frame = anim.getKeyFrame(stateTime, true);
         if (facingRight && frame.isFlipX()) frame.flip(true, false);
         if (!facingRight && !frame.isFlipX()) frame.flip(true, false);
-        float drawW = width * 1.35f;
-        float drawH = height * 1.35f;
+        float drawW = width * 1.55f;
+        float drawH = height * 1.55f;
         float drawX = position.x - (drawW - width) / 2f;
         float drawY = position.y;
         batch.draw(frame, drawX, drawY, drawW, drawH);
