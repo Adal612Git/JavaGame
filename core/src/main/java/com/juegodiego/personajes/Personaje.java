@@ -56,9 +56,13 @@ public abstract class Personaje {
     protected void ensureRunAnim() {
         Animation<TextureRegion> runAnim = anims.get(Estado.RUN);
         Animation<TextureRegion> idleAnim = anims.get(Estado.IDLE);
-        if ((runAnim == null || runAnim.getKeyFrames().length == 0) && idleAnim != null) {
-            anims.put(Estado.RUN, idleAnim);
-            Gdx.app.log("[[RUN-FIX]]", "Assigned IDLE anim to RUN (frames=" + idleAnim.getKeyFrames().length + ")");
+        if (runAnim == null || runAnim.getKeyFrames() == null || runAnim.getKeyFrames().length == 0) {
+            if (idleAnim != null && idleAnim.getKeyFrames().length > 0) {
+                Animation<TextureRegion> clone =
+                        new Animation<>(idleAnim.getFrameDuration(), idleAnim.getKeyFrames());
+                anims.put(Estado.RUN, clone);
+                Gdx.app.log("[[RUN-FIX]]", "Assigned IDLE anim to RUN (frames=" + idleAnim.getKeyFrames().length + ")");
+            }
         }
     }
 
@@ -121,7 +125,7 @@ public abstract class Personaje {
     protected void setEstado(Estado nuevo) {
         if (estado != nuevo) {
             if (nuevo == Estado.RUN) {
-                Gdx.app.log("[[STATE]]", "ENTER RUN onGround=" + onGround + " vx=" + velocity.x + " vy=" + velocity.y);
+                Gdx.app.log("[[STATE]]", "ENTER RUN onGround=" + onGround + " vx=" + velocity.x);
                 Animation<TextureRegion> runAnim = anims.get(Estado.RUN);
                 if (runAnim == null || runAnim.getKeyFrames().length == 0) {
                     Gdx.app.error("[[ERROR]]", "RUN has 0 frames after load — expected >=1");
