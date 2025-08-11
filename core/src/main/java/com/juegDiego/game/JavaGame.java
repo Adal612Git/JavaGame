@@ -1,11 +1,9 @@
 package com.juegDiego.game;
 
-import com.badlogic.gdx.Game;
+import com.juegodiego.JuegoDiegoGame;
 
-public class JavaGame extends Game {
-    @Override
-    public void create() {
-        setScreen(new GameScreen(this));
-    }
+/**
+ * Clase puente para el lanzador existente.
+ */
+public class JavaGame extends JuegoDiegoGame {
 }
-
