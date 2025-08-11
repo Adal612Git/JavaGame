@@ -11,10 +11,15 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.juegDiego.core.escenarios.CajaArmas;
 import com.juegDiego.core.escenarios.Escenario;
+import com.juegDiego.core.escenarios.Obstaculo;
 import com.juegDiego.core.escenarios.Trampolin;
-import com.juegDiego.core.juego.Player;
+import com.juegDiego.core.juego.Artefacto;
 import com.juegDiego.game.VisualConfig;
+import com.juegodiego.personajes.Personaje;
+
+import java.util.Random;
 
 public class GameScreen implements Screen {
 
@@ -28,13 +33,17 @@ public class GameScreen implements Screen {
     private FitViewport viewport;
 
     private Escenario escenario;
-    private Player player;
+    private Personaje player;
+    private int score;
+    private float damageCooldown;
+    private final Random rng = new Random();
 
     private Texture overlayTexture;
     private ShaderProgram playerShader;
 
-    public GameScreen(Game game) {
+    public GameScreen(Game game, Personaje player) {
         this.game = game;
+        this.player = player;
     }
 
     @Override
@@ -45,7 +54,7 @@ public class GameScreen implements Screen {
         viewport.apply();
         camera.position.set(WORLD_W / 2f, WORLD_H / 2f, 0);
         escenario = Escenario.crearEscenarioPrueba();
-        player = new Player(50, 200);
+        player.getPosition().set(50, 200);
 
         Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pm.setColor(Color.WHITE);
@@ -102,11 +111,41 @@ public class GameScreen implements Screen {
         player.update(delta);
         escenario.actualizar(delta);
 
+        if (damageCooldown > 0) damageCooldown -= delta;
+
         for (Trampolin t : escenario.getTrampolines()) {
-            if (escenario.intersectaPlayer(t, player)) {
+            if (escenario.intersectaPersonaje(t, player)) {
                 player.getVelocity().y = t.getImpulsoY();
                 escenario.rampaVelocidad(player, 1.5f, 2f);
             }
+        }
+
+        for (int i = escenario.getCajasArmas().size - 1; i >= 0; i--) {
+            CajaArmas c = escenario.getCajasArmas().get(i);
+            if (escenario.intersectaPersonaje(c, player)) {
+                Artefacto a = c.abrir(rng);
+                escenario.getCajasArmas().removeIndex(i);
+                score += 10;
+                Gdx.app.log("Game", "Arma recogida, puntaje actual: " + score + " (" + a + ")");
+            }
+        }
+
+        for (Obstaculo o : escenario.getObstaculos()) {
+            if (damageCooldown <= 0 && escenario.intersectaPersonaje(o, player)) {
+                score -= 5;
+                damageCooldown = 1f;
+                Gdx.app.log("Game", "Recibido daño, puntaje actual: " + score);
+            }
+        }
+
+        if (score >= 30) {
+            Gdx.app.log("Game", "Victoria, puntaje final: " + score);
+            game.setScreen(new VictoryScreen(game, score));
+            return;
+        } else if (score <= -10) {
+            Gdx.app.log("Game", "Derrota, puntaje final: " + score);
+            game.setScreen(new DefeatScreen(game, score));
+            return;
         }
 
         camera.update();
@@ -122,7 +161,7 @@ public class GameScreen implements Screen {
             playerShader.setUniformf("u_contrast", VisualConfig.PLAYER_CONTRAST);
             playerShader.setUniformf("u_brightness", VisualConfig.PLAYER_BRIGHTNESS);
         }
-        player.draw(batch);
+        player.render(batch);
         batch.setShader(null);
         batch.end();
     }

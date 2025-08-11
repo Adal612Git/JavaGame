@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
@@ -46,6 +47,8 @@ public abstract class Personaje {
     private float lastFrameW;
     private float lastFrameH;
 
+    protected final Rectangle bounds = new Rectangle();
+
     protected Personaje(String id, String nombre, AssetManager manager, Vector2 spawn) {
         this.id = id;
         this.nombre = nombre;
@@ -70,6 +73,7 @@ public abstract class Personaje {
         handleInput(delta);
         updateCooldowns(delta);
         applyPhysics(delta);
+        updateBounds();
         updateEstado();
         if (estado == Estado.ATTACK) {
             attackTimer -= delta;
@@ -107,6 +111,10 @@ public abstract class Personaje {
         } else {
             onGround = false;
         }
+    }
+
+    protected void updateBounds() {
+        bounds.set(position.x, position.y, 32, 48);
     }
 
     protected void updateEstado() {
@@ -188,6 +196,10 @@ public abstract class Personaje {
         return hp > 0;
     }
 
+    public Rectangle getBounds() {
+        return bounds;
+    }
+
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
         if (estado == Estado.RUN) {
@@ -235,6 +247,10 @@ public abstract class Personaje {
         return position;
     }
 
+    public Vector2 getVelocity() {
+        return velocity;
+    }
+
     public Direccion getDir() {
         return dir;
     }
@@ -242,6 +258,12 @@ public abstract class Personaje {
     public void setDir(Direccion d) {
         this.dir = d;
     }
+
+    public float getSpeed() { return speed; }
+
+    public void setSpeed(float s) { this.speed = s; }
+
+    public String getNombre() { return nombre; }
 
     public float getLastDrawWidth() { return lastDrawW; }
     public float getLastDrawHeight() { return lastDrawH; }
