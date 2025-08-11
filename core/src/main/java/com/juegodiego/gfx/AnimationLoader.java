@@ -36,105 +36,118 @@ public class AnimationLoader {
         for (Estado st : Estado.values()) {
             String dirPath = base + st.name().toLowerCase();
             FileHandle dir = Gdx.files.internal(dirPath);
-            if (dir.exists() && dir.isDirectory()) {
-                FileHandle[] files = dir.list("png");
-                if (files != null && files.length > 0) {
-                    Array<FileHandle> matches = new Array<>();
-                    String patternUsed = "";
-                    if (st == Estado.RUN) {
-                        String[] pats = {"run_\\d+\\.png", "Run_\\d+\\.png", "Gato\\d+\\.png", "Mapache\\d+\\.png", "Conejo\\d+\\.png"};
-                        for (String p : pats) {
-                            matches.clear();
-                            for (FileHandle fh : files) {
-                                if (fh.name().matches(p)) matches.add(fh);
-                            }
-                            if (matches.size > 0) { patternUsed = p; break; }
-                        }
-                    } else if (st == Estado.IDLE) {
-                        FileHandle idle = dir.child("idle.png");
-                        if (idle.exists()) {
-                            matches.add(idle);
-                            patternUsed = "idle.png";
-                        } else {
-                            for (FileHandle fh : files) {
-                                if (fh.name().matches("idle_\\d+\\.png")) matches.add(fh);
-                            }
-                            if (matches.size > 0) patternUsed = "idle_####.png";
-                        }
-                    } else {
-                        for (FileHandle fh : files) {
+            boolean dirExists = dir.exists() && dir.isDirectory();
+            FileHandle[] files = dirExists ? dir.list() : new FileHandle[0];
+            int dirCount = files.length;
+            Array<FileHandle> matches = new Array<>();
+
+            if (st == Estado.RUN) {
+                String[] pats = {"run_\\d+\\.png", "Run_\\d+\\.png", "Gato\\d+\\.png", "Mapache\\d+\\.png", "Conejo\\d+\\.png"};
+                for (String p : pats) {
+                    matches.clear();
+                    for (FileHandle fh : files) {
+                        if (fh.extension().equals("png") && fh.name().matches(p)) {
                             matches.add(fh);
                         }
-                        if (matches.size > 0) patternUsed = "*";
                     }
-
+                    Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + dirPath + " pattern=" + p + " count=" + matches.size +
+                            " exists=" + dirExists + " list=" + dirCount);
                     if (matches.size > 0) {
-                        matches.sort(Comparator.comparing(FileHandle::name));
-                        Array<TextureRegion> frames = new Array<>();
-                        for (FileHandle fh : matches) {
-                            String path = dirPath + "/" + fh.name();
-                            am.load(path, Texture.class);
-                            am.finishLoadingAsset(path);
-                            Texture tex = am.get(path, Texture.class);
-                            frames.add(new TextureRegion(tex));
-                        }
-                        float fd = st == Estado.RUN ? RUN_SPEED : DEFAULT_SPEED;
-                        map.put(st, new Animation<>(fd, frames));
-                        String sample = dirPath + "/" + matches.first().name();
-                        Gdx.app.log("[" + personaje + "]", "FOUND " + st + " " + matches.size + " frames @ " + dirPath + " pattern=" + patternUsed);
-                        diag.record(personaje, st, "FOUND", matches.size, sample);
-                        continue;
+                        break;
                     }
                 }
+            } else if (st == Estado.IDLE) {
+                FileHandle idle = dir.child("idle.png");
+                if (idle.exists()) {
+                    matches.add(idle);
+                }
+                Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + dirPath + " pattern=idle.png count=" + (idle.exists() ? 1 : 0) +
+                        " exists=" + dirExists + " list=" + dirCount);
+                if (matches.size == 0) {
+                    for (FileHandle fh : files) {
+                        if (fh.extension().equals("png") && fh.name().matches("idle_\\d+\\.png")) {
+                            matches.add(fh);
+                        }
+                    }
+                    Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + dirPath + " pattern=idle_####.png count=" + matches.size +
+                            " exists=" + dirExists + " list=" + dirCount);
+                }
+            } else {
+                for (FileHandle fh : files) {
+                    if ("png".equals(fh.extension())) {
+                        matches.add(fh);
+                    }
+                }
+                Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + dirPath + " pattern=*.png count=" + matches.size +
+                        " exists=" + dirExists + " list=" + dirCount);
             }
-            Gdx.app.log("[" + personaje + "]", "MISSING " + st + " @ " + dirPath);
+
+            if (matches.size > 0) {
+                matches.sort(Comparator.comparing(FileHandle::name));
+                Array<TextureRegion> frames = new Array<>();
+                for (FileHandle fh : matches) {
+                    String path = dirPath + "/" + fh.name();
+                    am.load(path, Texture.class);
+                    am.finishLoadingAsset(path);
+                    frames.add(new TextureRegion(am.get(path, Texture.class)));
+                }
+                float fd = st == Estado.RUN ? RUN_SPEED : DEFAULT_SPEED;
+                map.put(st, new Animation<>(fd, frames));
+                String sample = dirPath + "/" + matches.first().name();
+                Gdx.app.log("[[" + personaje + "]]", "FOUND " + st + " frames=" + matches.size + " sample=" + sample);
+                diag.record(personaje, st, "FOUND", matches.size, sample);
+            } else {
+                Gdx.app.log("[[" + personaje + "]]", "MISSING " + st + " @ " + dirPath + " (dir exists=" + dirExists + ")");
+            }
         }
 
         // Mapeo de animal para fallbacks
-        String jumpFile, deathFile, runFolder;
+        String animal;
         switch (personaje.toLowerCase()) {
             case "roky":
-                jumpFile = "Racoon_jump.png";
-                deathFile = "Mapache_Skin.png";
-                runFolder = "Mapache_Run";
+                animal = "Mapache";
                 break;
             case "thumper":
-                jumpFile = "Rabbit_jump.png";
-                deathFile = "Conejo_Skin.png";
-                runFolder = "Conejo_Run";
+                animal = "Conejo";
                 break;
             case "orion":
             default:
-                jumpFile = "Cat_jump.png";
-                deathFile = "Gato_Skin.png";
-                runFolder = "Gato_Run";
+                animal = "Gato";
                 break;
         }
         String speedBase = "images/personajes/animaciones/Speedpaws_Char/";
 
         // Fallback RUN
         if (!map.containsKey(Estado.RUN)) {
-            String fbDir = speedBase + runFolder + "/";
+            String fbDir = speedBase + animal + "_Run/";
             FileHandle dir = Gdx.files.internal(fbDir);
-            if (dir.exists()) {
-                FileHandle[] files = dir.list("png");
-                if (files != null && files.length > 0) {
-                    Arrays.sort(files, Comparator.comparing(FileHandle::name));
-                    Array<TextureRegion> frames = new Array<>();
-                    for (FileHandle fh : files) {
-                        String path = fbDir + fh.name();
-                        am.load(path, Texture.class);
-                        am.finishLoadingAsset(path);
-                        frames.add(new TextureRegion(am.get(path, Texture.class)));
-                    }
-                    map.put(Estado.RUN, new Animation<>(RUN_SPEED, frames));
-                    diag.record(personaje, Estado.RUN, "FALLBACK", files.length, fbDir + files[0].name());
-                    Gdx.app.log("[" + personaje + "]", "FALLBACK RUN " + files.length + " frames @ " + fbDir);
-                } else {
-                    Gdx.app.log("[" + personaje + "]", "MISSING RUN @ " + fbDir);
+            boolean dirExists = dir.exists() && dir.isDirectory();
+            FileHandle[] raw = dirExists ? dir.list() : new FileHandle[0];
+            int listCount = raw.length;
+            Array<FileHandle> filtered = new Array<>();
+            for (FileHandle fh : raw) {
+                if ("png".equals(fh.extension())) {
+                    filtered.add(fh);
                 }
+            }
+            FileHandle[] files = filtered.toArray(FileHandle.class);
+            Arrays.sort(files, Comparator.comparing(FileHandle::name));
+            Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + fbDir + " pattern=*.png count=" + files.length +
+                    " exists=" + dirExists + " list=" + listCount);
+            if (files.length > 0) {
+                Array<TextureRegion> frames = new Array<>();
+                for (FileHandle fh : files) {
+                    String path = fbDir + fh.name();
+                    am.load(path, Texture.class);
+                    am.finishLoadingAsset(path);
+                    frames.add(new TextureRegion(am.get(path, Texture.class)));
+                }
+                map.put(Estado.RUN, new Animation<>(RUN_SPEED, frames));
+                String sample = fbDir + files[0].name();
+                Gdx.app.log("[[" + personaje + "]]", "FALLBACK RUN frames=" + files.length + " sample=" + sample);
+                diag.record(personaje, Estado.RUN, "FALLBACK", files.length, sample);
             } else {
-                Gdx.app.log("[" + personaje + "]", "MISSING RUN @ " + fbDir);
+                Gdx.app.log("[[" + personaje + "]]", "MISSING RUN @ " + fbDir + " (dir exists=" + dirExists + ")");
             }
         }
 
@@ -143,38 +156,57 @@ public class AnimationLoader {
             TextureRegion first = map.get(Estado.RUN).getKeyFrames()[0];
             map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, first));
             diag.record(personaje, Estado.IDLE, "FALLBACK", 1, "from RUN");
-            Gdx.app.log("[" + personaje + "]", "FALLBACK IDLE 1 frames @ from RUN");
+            Gdx.app.log("[[" + personaje + "]]", "FALLBACK IDLE frames=1 sample=from RUN");
         }
 
-        // Fallback JUMP
+        // Fallback JUMP y FALL
+        String jumpFile;
+        switch (animal) {
+            case "Mapache":
+                jumpFile = "Racoon_jump.png";
+                break;
+            case "Conejo":
+                jumpFile = "Rabbit_jump.png";
+                break;
+            case "Gato":
+            default:
+                jumpFile = "Cat_jump.png";
+                break;
+        }
+
         if (!map.containsKey(Estado.JUMP)) {
             String path = speedBase + "Jump_pose/" + jumpFile;
             FileHandle fh = Gdx.files.internal(path);
-            if (fh.exists()) {
+            boolean exists = fh.exists();
+            Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + path + " pattern=file count=" + (exists ? 1 : 0) +
+                    " exists=" + exists + " list=" + (exists ? 1 : 0));
+            if (exists) {
                 am.load(path, Texture.class);
                 am.finishLoadingAsset(path);
                 TextureRegion region = new TextureRegion(am.get(path, Texture.class));
                 map.put(Estado.JUMP, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, Estado.JUMP, "FALLBACK", 1, path);
-                Gdx.app.log("[" + personaje + "]", "FALLBACK JUMP 1 frames @ " + path);
+                Gdx.app.log("[[" + personaje + "]]", "FALLBACK JUMP frames=1 sample=" + path);
             } else {
-                Gdx.app.log("[" + personaje + "]", "MISSING JUMP @ " + path);
+                Gdx.app.log("[[" + personaje + "]]", "MISSING JUMP @ " + path + " (dir exists=" + exists + ")");
             }
         }
 
-        // Fallback FALL
         if (!map.containsKey(Estado.FALL)) {
             String path = speedBase + "Jump_pose/" + jumpFile;
             FileHandle fh = Gdx.files.internal(path);
-            if (fh.exists()) {
+            boolean exists = fh.exists();
+            Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + path + " pattern=file count=" + (exists ? 1 : 0) +
+                    " exists=" + exists + " list=" + (exists ? 1 : 0));
+            if (exists) {
                 am.load(path, Texture.class);
                 am.finishLoadingAsset(path);
                 TextureRegion region = new TextureRegion(am.get(path, Texture.class));
                 map.put(Estado.FALL, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, Estado.FALL, "FALLBACK", 1, path);
-                Gdx.app.log("[" + personaje + "]", "FALLBACK FALL 1 frames @ " + path);
+                Gdx.app.log("[[" + personaje + "]]", "FALLBACK FALL frames=1 sample=" + path);
             } else {
-                Gdx.app.log("[" + personaje + "]", "MISSING FALL @ " + path);
+                Gdx.app.log("[[" + personaje + "]]", "MISSING FALL @ " + path + " (dir exists=" + exists + ")");
             }
         }
 
@@ -182,27 +214,43 @@ public class AnimationLoader {
         if (!map.containsKey(Estado.ATTACK) && map.containsKey(Estado.IDLE)) {
             map.put(Estado.ATTACK, map.get(Estado.IDLE));
             diag.record(personaje, Estado.ATTACK, "FALLBACK", 1, "from IDLE");
-            Gdx.app.log("[" + personaje + "]", "FALLBACK ATTACK 1 frames @ from IDLE");
+            Gdx.app.log("[[" + personaje + "]]", "FALLBACK ATTACK frames=1 sample=from IDLE");
         }
         if (!map.containsKey(Estado.HURT) && map.containsKey(Estado.IDLE)) {
             map.put(Estado.HURT, map.get(Estado.IDLE));
             diag.record(personaje, Estado.HURT, "FALLBACK", 1, "from IDLE");
-            Gdx.app.log("[" + personaje + "]", "FALLBACK HURT 1 frames @ from IDLE");
+            Gdx.app.log("[[" + personaje + "]]", "FALLBACK HURT frames=1 sample=from IDLE");
         }
 
         // Fallback DEAD
+        String deathFile;
+        switch (animal) {
+            case "Mapache":
+                deathFile = "Mapache_Skin.png";
+                break;
+            case "Conejo":
+                deathFile = "Conejo_Skin.png";
+                break;
+            case "Gato":
+            default:
+                deathFile = "Gato_Skin.png";
+                break;
+        }
         if (!map.containsKey(Estado.DEAD)) {
             String path = speedBase + "Death/" + deathFile;
             FileHandle fh = Gdx.files.internal(path);
-            if (fh.exists()) {
+            boolean exists = fh.exists();
+            Gdx.app.log("[[" + personaje + "]]", "CHECK dir=" + path + " pattern=file count=" + (exists ? 1 : 0) +
+                    " exists=" + exists + " list=" + (exists ? 1 : 0));
+            if (exists) {
                 am.load(path, Texture.class);
                 am.finishLoadingAsset(path);
                 TextureRegion region = new TextureRegion(am.get(path, Texture.class));
                 map.put(Estado.DEAD, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, Estado.DEAD, "FALLBACK", 1, path);
-                Gdx.app.log("[" + personaje + "]", "FALLBACK DEAD 1 frames @ " + path);
+                Gdx.app.log("[[" + personaje + "]]", "FALLBACK DEAD frames=1 sample=" + path);
             } else {
-                Gdx.app.log("[" + personaje + "]", "MISSING DEAD @ " + path);
+                Gdx.app.log("[[" + personaje + "]]", "MISSING DEAD @ " + path + " (dir exists=" + exists + ")");
             }
         }
 
@@ -211,14 +259,28 @@ public class AnimationLoader {
             if (!map.containsKey(st)) {
                 Color color;
                 switch (st) {
-                    case RUN: color = Color.BLUE; break;
-                    case JUMP: color = Color.YELLOW; break;
-                    case FALL: color = Color.ORANGE; break;
-                    case ATTACK: color = Color.RED; break;
-                    case HURT: color = Color.PURPLE; break;
-                    case DEAD: color = Color.GRAY; break;
+                    case RUN:
+                        color = Color.BLUE;
+                        break;
+                    case JUMP:
+                        color = Color.YELLOW;
+                        break;
+                    case FALL:
+                        color = Color.ORANGE;
+                        break;
+                    case ATTACK:
+                        color = Color.RED;
+                        break;
+                    case HURT:
+                        color = Color.PURPLE;
+                        break;
+                    case DEAD:
+                        color = Color.GRAY;
+                        break;
                     case IDLE:
-                    default: color = Color.GREEN; break;
+                    default:
+                        color = Color.GREEN;
+                        break;
                 }
                 Pixmap pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
                 pm.setColor(color);
@@ -228,7 +290,7 @@ public class AnimationLoader {
                 TextureRegion region = new TextureRegion(tex);
                 map.put(st, new Animation<>(DEFAULT_SPEED, region));
                 diag.record(personaje, st, "FINAL_FALLBACK", 1, "solid-color");
-                Gdx.app.log("[" + personaje + "]", "FINAL_FALLBACK " + st + " solid-color");
+                Gdx.app.log("[[" + personaje + "]]", "FINAL_FALLBACK " + st);
             }
         }
 

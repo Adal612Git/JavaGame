@@ -38,6 +38,10 @@ public abstract class Personaje {
     protected boolean invulnerable;
     private float attackTimer;
     private float stateTime;
+    private float lastDrawW;
+    private float lastDrawH;
+    private float lastFrameW;
+    private float lastFrameH;
 
     protected Personaje(String id, String nombre, AssetManager manager, Vector2 spawn) {
         this.id = id;
@@ -166,6 +170,10 @@ public abstract class Personaje {
         }
         float drawHeight = Const.TARGET_SPRITE_HEIGHT;
         float drawWidth = frame.getRegionWidth() * (drawHeight / frame.getRegionHeight());
+        lastFrameW = frame.getRegionWidth();
+        lastFrameH = frame.getRegionHeight();
+        lastDrawW = drawWidth;
+        lastDrawH = drawHeight;
         batch.draw(frame, position.x, position.y, drawWidth, drawHeight);
     }
 
@@ -197,6 +205,11 @@ public abstract class Personaje {
     public void setDir(Direccion d) {
         this.dir = d;
     }
+
+    public float getLastDrawWidth() { return lastDrawW; }
+    public float getLastDrawHeight() { return lastDrawH; }
+    public float getLastFrameWidth() { return lastFrameW; }
+    public float getLastFrameHeight() { return lastFrameH; }
 
     public void dispose() {
         // nada por ahora
