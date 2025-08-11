@@ -1,32 +1,43 @@
 package com.mygdx.runner.characters;
 
-import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.mygdx.runner.graphics.AnimationLoader;
 import com.mygdx.runner.world.Track;
 
+import java.util.EnumMap;
+
 /**
- * Basic character with physics and rendering as colored rectangle.
+ * Basic character with physics and sprite animations.
  */
 public class CharacterBase {
     private final String name;
-    private final Color color;
     public final Vector2 position = new Vector2();
     public final Vector2 velocity = new Vector2();
     private final float width = 32f;
     private final float height = 48f;
     private boolean onGround = true;
     private float jumpCooldown = 0f;
+    private float stateTime = 0f;
+    private boolean facingRight = true;
+    private final EnumMap<State, Animation<TextureRegion>> anims;
+    private final com.badlogic.gdx.utils.Array<Texture> textures;
 
-    public CharacterBase(String name, Color color, float startX) {
+    public CharacterBase(String name, float startX) {
         this.name = name;
-        this.color = color;
         position.set(startX, 0);
+        AnimationLoader.Result res = AnimationLoader.load(name);
+        this.anims = res.animations;
+        this.textures = res.textures;
     }
 
     public void update(float delta, Track track) {
         jumpCooldown -= delta;
+        stateTime += delta;
         // gravity
         velocity.y -= 900f * delta;
         // move
@@ -53,6 +64,8 @@ public class CharacterBase {
         if (onGround) {
             velocity.x *= 0.98f;
         }
+        if (velocity.x > 0) facingRight = true;
+        else if (velocity.x < 0) facingRight = false;
     }
 
     public void jump(float force) {
@@ -67,10 +80,24 @@ public class CharacterBase {
         return new Rectangle(position.x, position.y, width, height);
     }
 
-    public void render(SpriteBatch batch, com.badlogic.gdx.graphics.Texture pixel) {
-        batch.setColor(color);
-        batch.draw(pixel, position.x, position.y, width, height);
-        batch.setColor(Color.WHITE);
+    private State resolveState() {
+        if (!onGround) return velocity.y >= 0 ? State.JUMP : State.FALL;
+        return Math.abs(velocity.x) > 1f ? State.RUN : State.IDLE;
+    }
+
+    public void render(SpriteBatch batch) {
+        State st = resolveState();
+        Animation<TextureRegion> anim = anims.get(st);
+        if (anim == null) anim = anims.get(State.IDLE);
+        if (anim == null) return;
+        TextureRegion frame = anim.getKeyFrame(stateTime, true);
+        if (facingRight && frame.isFlipX()) frame.flip(true, false);
+        if (!facingRight && !frame.isFlipX()) frame.flip(true, false);
+        batch.draw(frame, position.x, position.y, width, height);
+    }
+
+    public void dispose() {
+        for (Texture t : textures) t.dispose();
     }
 
     public String getName() { return name; }
