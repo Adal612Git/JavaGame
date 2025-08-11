@@ -7,8 +7,10 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.juegodiego.Const;
+import com.juegodiego.gfx.AnimationLoader;
 import java.util.EnumMap;
 
 /**
@@ -34,6 +36,7 @@ public abstract class Personaje {
     protected final EnumMap<Estado, Animation<TextureRegion>> anims = new EnumMap<>(Estado.class);
     public boolean debugDrawHitbox;
     protected final AssetManager manager;
+    private static final float EPS = 0.01f;
 
     protected boolean invulnerable;
     private float attackTimer;
@@ -99,7 +102,7 @@ public abstract class Personaje {
         }
         if (!onGround) {
             setEstado(velocity.y > 0 ? Estado.JUMP : Estado.FALL);
-        } else if (velocity.x != 0) {
+        } else if (Math.abs(velocity.x) > EPS) {
             setEstado(Estado.RUN);
         } else {
             setEstado(Estado.IDLE);
@@ -108,6 +111,20 @@ public abstract class Personaje {
 
     protected void setEstado(Estado nuevo) {
         if (estado != nuevo) {
+            if (nuevo == Estado.RUN) {
+                Gdx.app.log("[[STATE]]", "ENTER RUN onGround=" + onGround + " vx=" + velocity.x + " vy=" + velocity.y);
+                Animation<TextureRegion> runAnim = anims.get(Estado.RUN);
+                if (runAnim == null || runAnim.getKeyFrames().length == 0) {
+                    Gdx.app.error("[[ERROR]]", "RUN has 0 frames after load — expected >=1");
+                } else {
+                    Array<String> paths = AnimationLoader.getFramePaths(id, Estado.RUN);
+                    String s0 = paths != null && paths.size > 0 ? paths.get(0) : "n/a";
+                    String s1 = paths != null && paths.size > 1 ? paths.get(1) : "n/a";
+                    String s2 = paths != null && paths.size > 2 ? paths.get(2) : "n/a";
+                    Gdx.app.log("[[RUN]]", "frames=" + runAnim.getKeyFrames().length +
+                            " sample0=" + s0 + " sample1=" + s1 + " sample2=" + s2);
+                }
+            }
             estado = nuevo;
             stateTime = 0f;
             Gdx.app.log(nombre, "Estado: " + nuevo);
@@ -160,7 +177,10 @@ public abstract class Personaje {
 
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
-        if (anim == null) {
+        if (estado == Estado.RUN && (anim == null || anim.getKeyFrames().length == 0)) {
+            Gdx.app.log("[[RENDER]]", "RUN anim missing → using IDLE");
+            anim = anims.get(Estado.IDLE);
+        } else if (anim == null) {
             anim = anims.get(Estado.IDLE);
         }
         TextureRegion frame = anim.getKeyFrame(stateTime, true);

@@ -151,12 +151,11 @@ public class DemoScreen implements Screen {
                 logTimer = 0f;
                 Vector2 p = personaje.getPosition();
                 Gdx.app.log("[[RENDER]]", String.format(
-                        "state=%s draw=(%.1f,%.1f,%.1f,%.1f) frameWH=(%.0f,%.0f) cam=(%.1f,%.1f) vp=(%.1f,%.1f)",
+                        "state=%s pos=(%.1f,%.1f) cam=(%.1f,%.1f) vp=(%.1f,%.1f) drawWH=(%.1f,%.1f)",
                         personaje.getEstado(), p.x, p.y,
-                        personaje.getLastDrawWidth(), personaje.getLastDrawHeight(),
-                        personaje.getLastFrameWidth(), personaje.getLastFrameHeight(),
                         camera.position.x, camera.position.y,
-                        camera.viewportWidth, camera.viewportHeight));
+                        camera.viewportWidth, camera.viewportHeight,
+                        personaje.getLastDrawWidth(), personaje.getLastDrawHeight()));
             }
         }
     }
