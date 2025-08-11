@@ -200,6 +200,25 @@ public abstract class Personaje {
         return bounds;
     }
 
+    /**
+     * Marca al personaje como aterrizado sobre una plataforma o el suelo.
+     * Reposiciona al personaje y reinicia su velocidad vertical.
+     */
+    public void land(float y) {
+        position.y = y;
+        velocity.y = 0f;
+        onGround = true;
+        updateBounds();
+        setEstado(Math.abs(velocity.x) > 0 ? Estado.RUN : Estado.IDLE);
+    }
+
+    /**
+     * Indica que el personaje ha dejado de estar sobre una superficie.
+     */
+    public void leaveGround() {
+        onGround = false;
+    }
+
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
         if (estado == Estado.RUN && (anim == null || anim.getKeyFrames().length == 0)) {

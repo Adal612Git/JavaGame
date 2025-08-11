@@ -13,7 +13,7 @@ public class JuegoDiegoGame extends Game {
 
     public void setState(State s) {
         state = s;
-        Gdx.app.log("Game", "State -> " + s);
+        Gdx.app.log("INFO", "State -> " + s);
     }
 
     @Override

@@ -165,6 +165,10 @@ public abstract class Escenario {
         return trampolines;
     }
 
+    public Array<Plataforma> getPlataformas() {
+        return plataformas;
+    }
+
     public Array<CajaArmas> getCajasArmas() { return cajasArmas; }
 
     public Array<Obstaculo> getObstaculos() { return obstaculos; }
