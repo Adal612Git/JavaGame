@@ -15,6 +15,10 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.mygdx.runner.GameMain;
+import com.mygdx.runner.screens.loading.RaceLoadingScreen;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Simple text based character selection screen.
@@ -26,6 +30,8 @@ public class SelectScreen implements Screen {
     private Texture pixel;
     private Texture uiBg;
     private TextureRegion preview;
+    private final Map<String, TextureRegion> cache = new HashMap<>();
+    private String pendingId;
     private OrthographicCamera camera;
     private Viewport viewport;
     private int selected;
@@ -64,11 +70,13 @@ public class SelectScreen implements Screen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) { selected = (selected - 1 + ids.length) % ids.length; updatePreview(); }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             Gdx.app.log("INFO", "Character selected: " + ids[selected]);
-            game.setScreen(new RaceScreen((GameMain)game, ids[selected]));
+            game.setScreen(new RaceLoadingScreen((GameMain)game, ids[selected]));
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
         }
+
+        resolveLoading();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
@@ -89,6 +97,9 @@ public class SelectScreen implements Screen {
         }
         if (preview != null) {
             batch.draw(preview, 400, 120, 128, 128);
+        } else if (pendingId != null) {
+            font.setColor(Color.WHITE);
+            font.draw(batch, "Cargando...", 400, 120);
         }
         font.setColor(Color.WHITE);
         font.draw(batch, "UP/DOWN select, ENTER confirm", 50, 50);
@@ -118,8 +129,32 @@ public class SelectScreen implements Screen {
     private void updatePreview() {
         String id = ids[selected];
         GameMain gm = (GameMain) game;
-        Texture tex = gm.getAssetManager().get("assets/images/personajes/" + id + "/placeholder.png", Texture.class);
-        preview = new TextureRegion(tex);
+        if (cache.containsKey(id)) {
+            preview = cache.get(id);
+            pendingId = null;
+        } else {
+            String path = "assets/images/personajes/" + id + "/idle/1.png";
+            if (!gm.getAssetManager().isLoaded(path, Texture.class)) {
+                gm.getAssetManager().load(path, Texture.class);
+            }
+            pendingId = id;
+            preview = null;
+        }
         Gdx.app.log("INFO", "SelectScreen preview: " + id);
+    }
+
+    private void resolveLoading() {
+        if (pendingId == null) return;
+        GameMain gm = (GameMain) game;
+        if (gm.getAssetManager().update()) {
+            String path = "assets/images/personajes/" + pendingId + "/idle/1.png";
+            if (gm.getAssetManager().isLoaded(path)) {
+                Texture tex = gm.getAssetManager().get(path, Texture.class);
+                tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+                preview = new TextureRegion(tex);
+                cache.put(pendingId, preview);
+                pendingId = null;
+            }
+        }
     }
 }

@@ -13,12 +13,13 @@ import java.util.List;
  * Defines start/finish and obstacles.
  */
 public class Track {
+    public static final float RACE_LENGTH_PX = 6500f;
     private float startX = 0f;
-    private float finishX = 3000f;
+    private float finishX = startX + RACE_LENGTH_PX;
     private final List<Rectangle> obstacles = new ArrayList<>();
     private float groundY = 0f;
     private float npcMin = 160f;
-    private float npcMax = 210f;
+    private float npcMax = 205f;
 
     public Track() {
         loadConfig();

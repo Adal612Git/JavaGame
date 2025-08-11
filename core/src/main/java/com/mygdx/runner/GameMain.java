@@ -4,7 +4,6 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.assets.AssetManager;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Texture;
 import com.mygdx.runner.screens.SelectScreen;
 
@@ -27,25 +26,9 @@ public class GameMain extends Game {
     }
 
     private void loadAssets() {
-        // character placeholders
-        String[] ids = {"orion", "roky", "thumper"};
-        for (String id : ids) {
-            assetManager.load("assets/images/personajes/" + id + "/placeholder.png", Texture.class);
-        }
-        // selection UI background
+        // selection UI background (minimal boot)
         assetManager.load("assets/images/ui/seleccion_personajes.png", Texture.class);
-        // parallax layers
-        FileHandle dir = Gdx.files.internal("assets/escenarios/ecenario_Ralph");
-        if (dir.exists()) {
-            for (FileHandle f : dir.list("png")) {
-                assetManager.load(f.path(), Texture.class);
-            }
-        }
-        // artifact textures
-        String[] arts = {"caja","escudo","mochila","pistola","trueno","turbo"};
-        for (String a : arts) {
-            assetManager.load("assets/images/artefactos/" + a + ".png", Texture.class);
-        }
+        // TODO: load HUD fonts when available
     }
 
     @Override
