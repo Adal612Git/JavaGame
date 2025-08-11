@@ -17,6 +17,7 @@ public class Roky extends Personaje {
     public Roky(AssetManager manager, Vector2 spawn, GdxDiagnostics diag) {
         super("roky", "Roky", manager, spawn);
         anims.putAll(AnimationLoader.loadFor("roky", manager, diag));
+        ensureRunAnim();
         speed = 190f;
         jumpForce = 480f;
         attackPower = 14;

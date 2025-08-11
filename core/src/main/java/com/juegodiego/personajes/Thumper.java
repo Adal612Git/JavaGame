@@ -16,6 +16,7 @@ public class Thumper extends Personaje {
     public Thumper(AssetManager manager, Vector2 spawn, GdxDiagnostics diag) {
         super("thumper", "Thumper", manager, spawn);
         anims.putAll(AnimationLoader.loadFor("thumper", manager, diag));
+        ensureRunAnim();
         speed = 240f;
         jumpForce = 520f;
         attackPower = 12;

@@ -17,6 +17,7 @@ public class Orion extends Personaje {
     public Orion(AssetManager manager, Vector2 spawn, GdxDiagnostics diag) {
         super("orion", "Orion", manager, spawn);
         anims.putAll(AnimationLoader.loadFor("orion", manager, diag));
+        ensureRunAnim();
         speed = 260f;
         jumpForce = 520f;
         attackPower = 10;
