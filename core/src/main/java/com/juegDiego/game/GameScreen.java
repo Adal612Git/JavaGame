@@ -5,7 +5,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 
 public class GameScreen implements Screen {
 
@@ -18,6 +20,7 @@ public class GameScreen implements Screen {
     private Texture thumper;
     private Texture caja;
     private Texture escudo;
+    private BitmapFont font;
 
     public GameScreen(Game game) {
         this.game = game;
@@ -32,6 +35,8 @@ public class GameScreen implements Screen {
         thumper = new Texture("images/personajes/thumper/placeholder.png");
         caja = new Texture("images/artefactos/caja.png");
         escudo = new Texture("images/artefactos/escudo.png");
+        font = new BitmapFont();
+        font.getData().setScale(1.2f);
     }
 
     @Override
@@ -41,11 +46,15 @@ public class GameScreen implements Screen {
 
         batch.begin();
         batch.draw(fondo, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        batch.draw(orion, 100, 100);
-        batch.draw(roky, 300, 100);
-        batch.draw(thumper, 500, 100);
-        batch.draw(caja, 150, 220);
-        batch.draw(escudo, 380, 220);
+        batch.draw(orion, 32, 32, 96, 96);
+        batch.draw(roky, 160, 32, 96, 96);
+        batch.draw(thumper, 288, 32, 96, 96);
+        batch.draw(caja, 32, 160, 96, 96);
+        batch.draw(escudo, 160, 160, 96, 96);
+        font.setColor(Color.BLACK);
+        font.draw(batch, "DoD: placeholders visibles", 22, Gdx.graphics.getHeight() - 22);
+        font.setColor(Color.WHITE);
+        font.draw(batch, "DoD: placeholders visibles", 20, Gdx.graphics.getHeight() - 20);
         batch.end();
     }
 
@@ -74,6 +83,7 @@ public class GameScreen implements Screen {
         thumper.dispose();
         caja.dispose();
         escudo.dispose();
+        font.dispose();
     }
 }
 
