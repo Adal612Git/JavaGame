@@ -26,6 +26,16 @@ public class AnimationLoader {
 
     private static final Map<String, EnumMap<Estado, Array<String>>> loadedPaths = new HashMap<>();
 
+    private static Animation<TextureRegion> makeSolidColorAnimation(Color color) {
+        Pixmap pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+        pm.setColor(color);
+        pm.fill();
+        Texture tex = new Texture(pm);
+        pm.dispose();
+        TextureRegion region = new TextureRegion(tex);
+        return new Animation<>(DEFAULT_SPEED, region);
+    }
+
     private AnimationLoader() {}
 
     /** Devuelve las rutas de los frames cargados para un personaje y estado. */
@@ -49,7 +59,7 @@ public class AnimationLoader {
             boolean dirExists = dir.exists() && dir.isDirectory();
             FileHandle[] files = dirExists ? dir.list() : new FileHandle[0];
             int dirCount = files.length;
-            Array<FileHandle> matches = new Array<>();
+            Array<FileHandle> matches = new Array<>(FileHandle.class);
 
             if (st == Estado.RUN) {
                 String[] pats = {"run_\\d+\\.png", "Run_\\d+\\.png", "Gato\\d+\\.png", "Mapache\\d+\\.png", "Conejo\\d+\\.png", ".*\\.png"};
@@ -94,8 +104,8 @@ public class AnimationLoader {
 
             if (matches.size > 0) {
                 matches.sort(Comparator.comparing(FileHandle::name));
-                Array<TextureRegion> frames = new Array<>();
-                Array<String> paths = new Array<>();
+                Array<TextureRegion> frames = new Array<>(TextureRegion.class);
+                Array<String> paths = new Array<>(String.class);
                 for (FileHandle fh : matches) {
                     String path = dirPath + "/" + fh.name();
                     am.load(path, Texture.class);
@@ -104,11 +114,12 @@ public class AnimationLoader {
                     paths.add(path);
                 }
                 float fd = st == Estado.RUN ? RUN_SPEED : DEFAULT_SPEED;
-                map.put(st, new Animation<>(fd, frames));
+                TextureRegion[] arr = frames.toArray(TextureRegion.class);
+                map.put(st, new Animation<>(fd, arr));
                 loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(st, paths);
                 String sample = paths.first();
                 if (st == Estado.RUN) {
-                    Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + matches.size + " source=std-path");
+                    Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + matches.size + " source=std-path sample=" + sample);
                 } else {
                     Gdx.app.log("[[" + personaje + "]]", "FOUND " + st + " frames=" + matches.size + " sample=" + sample);
                 }
@@ -146,7 +157,7 @@ public class AnimationLoader {
             boolean dirExists = dir.exists() && dir.isDirectory();
             FileHandle[] raw = dirExists ? dir.list() : new FileHandle[0];
             int listCount = raw.length;
-            Array<FileHandle> filtered = new Array<>();
+            Array<FileHandle> filtered = new Array<>(FileHandle.class);
             for (FileHandle fh : raw) {
                 if ("png".equals(fh.extension())) {
                     filtered.add(fh);
@@ -157,8 +168,8 @@ public class AnimationLoader {
             Gdx.app.log("[[LOADER]]", "RUN CHECK dir=" + fbDir + " patterns=[*.png] listed=" + listCount + " matched=" + files.length +
                     " first=" + (files.length > 0 ? files[0].name() : "none"));
             if (files.length > 0) {
-                Array<TextureRegion> frames = new Array<>();
-                Array<String> paths = new Array<>();
+                Array<TextureRegion> frames = new Array<>(TextureRegion.class);
+                Array<String> paths = new Array<>(String.class);
                 for (FileHandle fh : files) {
                     String path = fbDir + fh.name();
                     am.load(path, Texture.class);
@@ -166,9 +177,10 @@ public class AnimationLoader {
                     frames.add(new TextureRegion(am.get(path, Texture.class)));
                     paths.add(path);
                 }
-                map.put(Estado.RUN, new Animation<>(RUN_SPEED, frames));
+                TextureRegion[] arr = frames.toArray(TextureRegion.class);
+                map.put(Estado.RUN, new Animation<>(RUN_SPEED, arr));
                 loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.RUN, paths);
-                Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + files.length + " source=speedpaws");
+                Gdx.app.log("[[LOADER]]", "RUN FOUND frames=" + files.length + " source=speedpaws sample=" + paths.first());
                 diag.record(personaje, Estado.RUN, "FALLBACK", files.length, paths.first());
             } else {
                 Gdx.app.log("[[LOADER]]", "RUN MISSING @ " + fbDir + " (dir exists=" + dirExists + ")");
@@ -176,13 +188,30 @@ public class AnimationLoader {
             }
         }
 
-        // Fallback RUN desde IDLE si aún falta
-        if (!map.containsKey(Estado.RUN) && map.containsKey(Estado.IDLE)) {
+        // Fallback RUN desde IDLE o color sólido
+        if (!map.containsKey(Estado.RUN)) {
             Animation<TextureRegion> idleAnim = map.get(Estado.IDLE);
-            map.put(Estado.RUN, idleAnim);
-            Gdx.app.log("[[LOADER]]", "RUN missing → using IDLE as fallback");
-            Gdx.app.log("[[LOADER]]", "RUN FOUND frames=0 → fallback=IDLE frames=" + idleAnim.getKeyFrames().length);
-            diag.record(personaje, Estado.RUN, "IDLE_FALLBACK", idleAnim.getKeyFrames().length, "from IDLE");
+            if (idleAnim != null && idleAnim.getKeyFrames().length > 0) {
+                Animation<TextureRegion> runFromIdle =
+                        new Animation<>(idleAnim.getFrameDuration(), idleAnim.getKeyFrames());
+                map.put(Estado.RUN, runFromIdle);
+                EnumMap<Estado, Array<String>> pathMap =
+                        loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class));
+                Array<String> idlePaths = pathMap.get(Estado.IDLE);
+                if (idlePaths != null) {
+                    pathMap.put(Estado.RUN, idlePaths);
+                }
+                Gdx.app.log("[[LOADER]]", "RUN missing → using IDLE as fallback (frames=" + idleAnim.getKeyFrames().length + ")");
+                diag.record(personaje, Estado.RUN, "IDLE_FALLBACK", idleAnim.getKeyFrames().length, "from IDLE");
+            } else {
+                Animation<TextureRegion> solid = makeSolidColorAnimation(Color.GREEN);
+                map.put(Estado.RUN, solid);
+                Array<String> paths = new Array<>(String.class);
+                paths.add("solid-color");
+                loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.RUN, paths);
+                Gdx.app.log("[[LOADER]]", "RUN & IDLE missing → using SOLID-COLOR as last resort");
+                diag.record(personaje, Estado.RUN, "FINAL_FALLBACK", 1, "solid-color");
+            }
         }
 
         // Fallback IDLE desde RUN
@@ -321,21 +350,12 @@ public class AnimationLoader {
                 pm.dispose();
                 TextureRegion region = new TextureRegion(tex);
                 map.put(st, new Animation<>(DEFAULT_SPEED, region));
-                Array<String> paths = new Array<>();
+                Array<String> paths = new Array<>(String.class);
                 paths.add("solid-color");
                 loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(st, paths);
                 diag.record(personaje, st, "FINAL_FALLBACK", 1, "solid-color");
                 Gdx.app.log("[[" + personaje + "]]", "FINAL_FALLBACK " + st);
             }
-        }
-
-        // Último intento de asignar RUN desde IDLE si sigue faltando
-        if (!map.containsKey(Estado.RUN) && map.containsKey(Estado.IDLE)) {
-            Animation<TextureRegion> idleAnim = map.get(Estado.IDLE);
-            map.put(Estado.RUN, idleAnim);
-            Gdx.app.log("[[LOADER]]", "RUN missing → using IDLE as fallback");
-            Gdx.app.log("[[LOADER]]", "RUN FOUND frames=0 → fallback=IDLE frames=" + idleAnim.getKeyFrames().length);
-            diag.record(personaje, Estado.RUN, "IDLE_FALLBACK", idleAnim.getKeyFrames().length, "from IDLE");
         }
 
         return map;

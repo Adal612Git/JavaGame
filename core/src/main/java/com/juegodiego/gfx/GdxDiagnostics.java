@@ -37,11 +37,12 @@ public class GdxDiagnostics {
     public void printReport(String personaje) {
         EnumMap<Estado, AnimInfo> map = data.get(personaje);
         Gdx.app.log("[LOADER]", "=== ANIM REPORT: " + personaje + " ===");
+        Estado[] order = {Estado.IDLE, Estado.RUN, Estado.JUMP, Estado.FALL};
         if (map != null) {
-            for (Estado st : Estado.values()) {
+            for (Estado st : order) {
                 AnimInfo info = map.get(st);
                 if (info != null) {
-                    Gdx.app.log("[LOADER]", st + ": " + info.status + " (frames=" + info.frames + ") sample=" + info.sample);
+                    Gdx.app.log("[LOADER]", st + ": " + info.status + " frames=" + info.frames + " sample=" + info.sample);
                 } else {
                     Gdx.app.log("[LOADER]", st + ": <no data>");
                 }
