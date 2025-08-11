@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.math.Vector2;
+import com.juegodiego.gfx.AnimationLoader;
 
 /**
  * Thumper con doble salto.
@@ -13,6 +14,7 @@ public class Thumper extends Personaje {
 
     public Thumper(AssetManager manager, Vector2 spawn) {
         super("thumper", "Thumper", manager, spawn);
+        anims.putAll(AnimationLoader.loadFor("thumper", manager));
         speed = 240f;
         jumpForce = 520f;
         attackPower = 12;

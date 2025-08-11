@@ -2,13 +2,11 @@ package com.juegodiego.personajes;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.juegodiego.Const;
 
@@ -33,7 +31,8 @@ public abstract class Personaje {
     protected Estado estado = Estado.IDLE;
     protected final ObjectMap<String, Float> cooldowns = new ObjectMap<>();
     protected final ObjectMap<Estado, Animation<TextureRegion>> anims = new ObjectMap<>();
-    protected final Array<Texture> ownedTextures = new Array<>();
+    public boolean debugDrawHitbox;
+    protected final AssetManager manager;
 
     protected boolean invulnerable;
     private float attackTimer;
@@ -42,40 +41,8 @@ public abstract class Personaje {
     protected Personaje(String id, String nombre, AssetManager manager, Vector2 spawn) {
         this.id = id;
         this.nombre = nombre;
+        this.manager = manager;
         this.position.set(spawn);
-        loadAnims(manager);
-    }
-
-    protected void loadAnims(AssetManager manager) {
-        anims.put(Estado.IDLE, loadAnim(manager, "idle.png", Color.GREEN));
-        anims.put(Estado.RUN, loadAnim(manager, "run.png", Color.BLUE));
-        anims.put(Estado.JUMP, loadAnim(manager, "jump.png", Color.YELLOW));
-        anims.put(Estado.FALL, loadAnim(manager, "fall.png", Color.ORANGE));
-        anims.put(Estado.ATTACK, loadAnim(manager, "attack.png", Color.RED));
-        anims.put(Estado.HURT, loadAnim(manager, "hurt.png", Color.PURPLE));
-        anims.put(Estado.DEAD, loadAnim(manager, "dead.png", Color.GRAY));
-    }
-
-    private Animation<TextureRegion> loadAnim(AssetManager manager, String file, Color color) {
-        String path = "images/personajes/animaciones/" + file;
-        Texture tex;
-        if (Gdx.files.internal(path).exists()) {
-            manager.load(path, Texture.class);
-            manager.finishLoadingAsset(path);
-            tex = manager.get(path, Texture.class);
-        } else {
-            int w = 64 * 4;
-            int h = 64;
-            com.badlogic.gdx.graphics.Pixmap pm = new com.badlogic.gdx.graphics.Pixmap(w, h, com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888);
-            pm.setColor(color);
-            pm.fill();
-            tex = new Texture(pm);
-            pm.dispose();
-            ownedTextures.add(tex);
-        }
-        TextureRegion[][] tmp = TextureRegion.split(tex, tex.getWidth() / 4, tex.getHeight());
-        TextureRegion[] frames = tmp[0];
-        return new Animation<>(0.1f, frames);
     }
 
     public void update(float delta) {
@@ -137,6 +104,7 @@ public abstract class Personaje {
     protected void setEstado(Estado nuevo) {
         if (estado != nuevo) {
             estado = nuevo;
+            stateTime = 0f;
             Gdx.app.log(nombre, "Estado: " + nuevo);
         }
     }
@@ -196,6 +164,11 @@ public abstract class Personaje {
         batch.draw(frame, position.x, position.y);
     }
 
+    public void renderDebug(ShapeRenderer shape) {
+        if (!debugDrawHitbox) return;
+        shape.rect(position.x, position.y, 32, 48);
+    }
+
     public void setCooldown(String key, float cd) {
         cooldowns.put(key, cd);
     }
@@ -208,9 +181,15 @@ public abstract class Personaje {
         return position;
     }
 
+    public Direccion getDir() {
+        return dir;
+    }
+
+    public void setDir(Direccion d) {
+        this.dir = d;
+    }
+
     public void dispose() {
-        for (Texture t : ownedTextures) {
-            t.dispose();
-        }
+        // nada por ahora
     }
 }

@@ -1,5 +1,18 @@
 package com.juegodiego.screens;
 
+/*
+# Desde la raíz del repo:
+# ./gradlew tasks | grep -i run
+# ./gradlew lwjgl3:run    # o desktop:run
+
+# Teclas de prueba:
+# Movimiento: A/D o ←/→
+# Salto: SPACE
+# Ataque: J
+# Habilidad: K
+# Cambiar personaje: 1 (Orion), 2 (Roky), 3 (Thumper)
+*/
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -60,12 +73,18 @@ public class DemoScreen implements Screen {
     }
 
     private void handleSpawnInput() {
+        Vector2 pos = personaje != null ? new Vector2(personaje.getPosition())
+                : new Vector2(Const.VIEWPORT_WIDTH / 2f, 0);
+        Personaje.Direccion dir = personaje != null ? personaje.getDir() : Personaje.Direccion.RIGHT;
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
-            spawnOrion(new Vector2(personaje != null ? personaje.getPosition().x : Const.VIEWPORT_WIDTH / 2f, 0));
+            spawnOrion(pos);
+            personaje.setDir(dir);
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
-            spawnRoky(new Vector2(personaje != null ? personaje.getPosition().x : Const.VIEWPORT_WIDTH / 2f, 0));
+            spawnRoky(pos);
+            personaje.setDir(dir);
         } else if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
-            spawnThumper(new Vector2(personaje != null ? personaje.getPosition().x : Const.VIEWPORT_WIDTH / 2f, 0));
+            spawnThumper(pos);
+            personaje.setDir(dir);
         }
     }
 
@@ -74,6 +93,8 @@ public class DemoScreen implements Screen {
         handleSpawnInput();
         if (personaje != null) {
             personaje.update(delta);
+            camera.position.x = personaje.getPosition().x + 32f;
+            camera.position.y = Const.VIEWPORT_HEIGHT / 2f;
         }
 
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1f);
@@ -92,6 +113,13 @@ public class DemoScreen implements Screen {
         shape.setColor(0.2f, 0.6f, 0.2f, 1f);
         shape.rect(0, 0, Const.VIEWPORT_WIDTH, 5);
         shape.end();
+
+        if (personaje != null && personaje.debugDrawHitbox) {
+            shape.begin(ShapeRenderer.ShapeType.Line);
+            shape.setColor(1f, 0f, 0f, 1f);
+            personaje.renderDebug(shape);
+            shape.end();
+        }
     }
 
     @Override public void resize(int width, int height) {}
