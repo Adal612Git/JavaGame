@@ -3,8 +3,6 @@ package com.juegodiego.gfx;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.files.FileHandle;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -25,16 +23,6 @@ public class AnimationLoader {
     private static final float DEFAULT_SPEED = 0.1f;
 
     private static final Map<String, EnumMap<Estado, Array<String>>> loadedPaths = new HashMap<>();
-
-    private static Animation<TextureRegion> makeSolidColorAnimation(Color color) {
-        Pixmap pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
-        pm.setColor(color);
-        pm.fill();
-        Texture tex = new Texture(pm);
-        pm.dispose();
-        TextureRegion region = new TextureRegion(tex);
-        return new Animation<>(DEFAULT_SPEED, region);
-    }
 
     private AnimationLoader() {}
 
@@ -134,6 +122,24 @@ public class AnimationLoader {
             }
         }
 
+        // Fallback IDLE usando Standing.png
+        if (!map.containsKey(Estado.IDLE)) {
+            String standingPath = base + "Standing.png";
+            FileHandle st = Gdx.files.internal(standingPath);
+            if (st.exists()) {
+                am.load(standingPath, Texture.class);
+                am.finishLoadingAsset(standingPath);
+                TextureRegion region = new TextureRegion(am.get(standingPath, Texture.class));
+                map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, region));
+                Array<String> paths = new Array<>(String.class);
+                paths.add(standingPath);
+                loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.IDLE, paths);
+                Gdx.app.log("INFO", "Standing.png fallback for IDLE in " + personaje);
+            } else {
+                Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ".");
+            }
+        }
+
         // Mapeo de animal para fallbacks
         String animal;
         switch (personaje.toLowerCase()) {
@@ -188,7 +194,7 @@ public class AnimationLoader {
             }
         }
 
-        // Fallback RUN desde IDLE o color sólido
+        // Fallback RUN desde IDLE
         if (!map.containsKey(Estado.RUN)) {
             Animation<TextureRegion> idleAnim = map.get(Estado.IDLE);
             if (idleAnim != null && idleAnim.getKeyFrames().length > 0) {
@@ -201,16 +207,10 @@ public class AnimationLoader {
                 if (idlePaths != null) {
                     pathMap.put(Estado.RUN, idlePaths);
                 }
-                Gdx.app.log("[[LOADER]]", "RUN missing → using IDLE as fallback (frames=" + idleAnim.getKeyFrames().length + ")");
+                Gdx.app.log("WARN", "Missing frames for RUN in " + personaje + ". Using IDLE as fallback.");
                 diag.record(personaje, Estado.RUN, "IDLE_FALLBACK", idleAnim.getKeyFrames().length, "from IDLE");
             } else {
-                Animation<TextureRegion> solid = makeSolidColorAnimation(Color.GREEN);
-                map.put(Estado.RUN, solid);
-                Array<String> paths = new Array<>(String.class);
-                paths.add("solid-color");
-                loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(Estado.RUN, paths);
-                Gdx.app.log("[[LOADER]]", "RUN & IDLE missing → using SOLID-COLOR as last resort");
-                diag.record(personaje, Estado.RUN, "FINAL_FALLBACK", 1, "solid-color");
+                Gdx.app.log("WARN", "Missing frames for RUN in " + personaje + ". No frames available.");
             }
         }
 
@@ -219,7 +219,7 @@ public class AnimationLoader {
             TextureRegion first = map.get(Estado.RUN).getKeyFrames()[0];
             map.put(Estado.IDLE, new Animation<>(DEFAULT_SPEED, first));
             diag.record(personaje, Estado.IDLE, "FALLBACK", 1, "from RUN");
-            Gdx.app.log("[[" + personaje + "]]", "FALLBACK IDLE frames=1 sample=from RUN");
+            Gdx.app.log("WARN", "Missing frames for IDLE in " + personaje + ". Using RUN as fallback.");
         }
 
         // Fallback JUMP y FALL
@@ -316,48 +316,14 @@ public class AnimationLoader {
                 Gdx.app.log("[[" + personaje + "]]", "MISSING DEAD @ " + path + " (dir exists=" + exists + ")");
             }
         }
-
-        // Final fallback
         for (Estado st : Estado.values()) {
-            if (st == Estado.RUN) continue;
             if (!map.containsKey(st)) {
-                Color color;
-                switch (st) {
-                    case JUMP:
-                        color = Color.YELLOW;
-                        break;
-                    case FALL:
-                        color = Color.ORANGE;
-                        break;
-                    case ATTACK:
-                        color = Color.RED;
-                        break;
-                    case HURT:
-                        color = Color.PURPLE;
-                        break;
-                    case DEAD:
-                        color = Color.GRAY;
-                        break;
-                    case IDLE:
-                    default:
-                        color = Color.GREEN;
-                        break;
-                }
-                Pixmap pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
-                pm.setColor(color);
-                pm.fill();
-                Texture tex = new Texture(pm);
-                pm.dispose();
-                TextureRegion region = new TextureRegion(tex);
-                map.put(st, new Animation<>(DEFAULT_SPEED, region));
-                Array<String> paths = new Array<>(String.class);
-                paths.add("solid-color");
-                loadedPaths.computeIfAbsent(personaje, k -> new EnumMap<>(Estado.class)).put(st, paths);
-                diag.record(personaje, st, "FINAL_FALLBACK", 1, "solid-color");
-                Gdx.app.log("[[" + personaje + "]]", "FINAL_FALLBACK " + st);
+                Gdx.app.log("WARN", "Missing frames for " + st + " in " + personaje + ".");
             }
         }
-
+        int idleCount = map.containsKey(Estado.IDLE) ? map.get(Estado.IDLE).getKeyFrames().length : 0;
+        int runCount = map.containsKey(Estado.RUN) ? map.get(Estado.RUN).getKeyFrames().length : 0;
+        Gdx.app.log("INFO", "Anim loaded: " + personaje + " IDLE=" + idleCount + " RUN=" + runCount);
         return map;
     }
 }
