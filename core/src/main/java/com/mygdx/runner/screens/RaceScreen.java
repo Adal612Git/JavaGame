@@ -59,22 +59,15 @@ public class RaceScreen implements Screen {
         bg = new ParallaxBackground();
         track = new Track();
         // create characters
-        player = new CharacterBase(playerId, colorFor(playerId), 0);
+        player = new CharacterBase(playerId, 0);
         String[] all = {"orion","roky","thumper"};
         java.util.List<String> npcs = new java.util.ArrayList<>();
         for(String s: all) if(!s.equals(playerId)) npcs.add(s);
-        npc1 = new CharacterBase(npcs.get(0), colorFor(npcs.get(0)), -40);
-        npc2 = new CharacterBase(npcs.get(1), colorFor(npcs.get(1)), -80);
+        npc1 = new CharacterBase(npcs.get(0), -40);
+        npc2 = new CharacterBase(npcs.get(1), -80);
         playerCtrl = new PlayerController(player);
         ai1 = new AiController(npc1, track, track.getNpcMin(), track.getNpcMax());
         ai2 = new AiController(npc2, track, track.getNpcMin(), track.getNpcMax());
-    }
-
-    private Color colorFor(String id){
-        if(id.equals("orion")) return Color.BLUE;
-        if(id.equals("roky")) return Color.RED;
-        if(id.equals("thumper")) return Color.GREEN;
-        return Color.WHITE;
     }
 
     @Override
@@ -113,7 +106,7 @@ public class RaceScreen implements Screen {
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        bg.render(batch,pixel,camera.position.x-320,640,360);
+        bg.render(batch,camera.position.x-320,640,360);
         // ground
         batch.setColor(Color.DARK_GRAY);
         batch.draw(pixel, camera.position.x-320, track.getGroundY()-5, 640,5);
@@ -129,9 +122,9 @@ public class RaceScreen implements Screen {
             batch.draw(pixel,r.x,r.y,r.width,r.height);
         }
         // characters
-        player.render(batch,pixel);
-        npc1.render(batch,pixel);
-        npc2.render(batch,pixel);
+        player.render(batch);
+        npc1.render(batch);
+        npc2.render(batch);
         batch.end();
 
         // HUD
@@ -184,5 +177,13 @@ public class RaceScreen implements Screen {
     @Override public void pause(){}
     @Override public void resume(){}
     @Override public void hide(){}
-    @Override public void dispose(){batch.dispose();pixel.dispose();font.dispose();}
+    @Override public void dispose(){
+        batch.dispose();
+        pixel.dispose();
+        font.dispose();
+        bg.dispose();
+        player.dispose();
+        npc1.dispose();
+        npc2.dispose();
+    }
 }
