@@ -46,6 +46,7 @@ public abstract class Personaje {
     private float lastDrawH;
     private float lastFrameW;
     private float lastFrameH;
+    private TextureRegion lastNonNullRegion;
 
     protected final Rectangle bounds = new Rectangle();
 
@@ -132,6 +133,7 @@ public abstract class Personaje {
 
     protected void setEstado(Estado nuevo) {
         if (estado != nuevo) {
+            Gdx.app.debug("PlayerState", estado + " -> " + nuevo + " grounded=" + onGround);
             if (nuevo == Estado.RUN) {
                 Gdx.app.log("[[STATE]]", "ENTER RUN onGround=" + onGround + " vx=" + velocity.x);
                 Animation<TextureRegion> runAnim = anims.get(Estado.RUN);
@@ -148,6 +150,9 @@ public abstract class Personaje {
             }
             estado = nuevo;
             stateTime = 0f;
+            if (nuevo == Estado.IDLE) {
+                updateBounds();
+            }
             Gdx.app.log(nombre, "Estado: " + nuevo);
         }
     }
@@ -221,6 +226,13 @@ public abstract class Personaje {
 
     public void render(SpriteBatch batch) {
         Animation<TextureRegion> anim = anims.get(estado);
+        if (estado == Estado.IDLE && (anim == null || anim.getKeyFrames().length == 0)) {
+            Animation<TextureRegion> runAnim = anims.get(Estado.RUN);
+            if (runAnim != null && runAnim.getKeyFrames().length > 0) {
+                anim = runAnim;
+                Gdx.app.log("WARN", "Missing frames for IDLE in " + nombre + ". Fallback=RUN frame0");
+            }
+        }
         if (estado == Estado.RUN && (anim == null || anim.getKeyFrames().length == 0)) {
             anim = anims.get(Estado.IDLE);
             if (anim != null) {
@@ -228,14 +240,24 @@ public abstract class Personaje {
             }
         }
         if (anim == null || anim.getKeyFrames().length == 0) {
-            Gdx.app.log("WARN", "Attempted to draw null texture for " + nombre + "/" + estado + ". Skipping.");
+            Gdx.app.log("WARN", "Attempted to draw null region " + nombre + "/" + estado + ". Keeping last frame.");
+            if (lastNonNullRegion != null) {
+                drawRegion(batch, lastNonNullRegion);
+            }
             return;
         }
         TextureRegion frame = anim.getKeyFrame(stateTime, true);
         if (frame == null || frame.getTexture() == null) {
-            Gdx.app.log("WARN", "Attempted to draw null texture for " + nombre + "/" + estado + ". Skipping.");
-            return;
+            Gdx.app.log("WARN", "Attempted to draw null region " + nombre + "/" + estado + ". Keeping last frame.");
+            frame = lastNonNullRegion;
+            if (frame == null) return;
+        } else {
+            lastNonNullRegion = frame;
         }
+        drawRegion(batch, frame);
+    }
+
+    private void drawRegion(SpriteBatch batch, TextureRegion frame) {
         boolean flip = dir == Direccion.LEFT;
         if (frame.isFlipX() != flip) {
             frame.flip(true, false);

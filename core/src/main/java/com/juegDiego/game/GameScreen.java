@@ -45,6 +45,11 @@ public class GameScreen implements Screen {
     private Rectangle terminateRect;
     private Rectangle quitRect;
 
+    private enum Contact { MAIN, SECONDARY, HAZARD, NONE }
+    private Contact contact = Contact.NONE;
+    private Contact lastContact = Contact.NONE;
+    private float hazardLogTimer;
+
     public GameScreen(Game game, Personaje player, Escenario escenario) {
         this.game = game;
         this.player = player;
@@ -54,6 +59,7 @@ public class GameScreen implements Screen {
     @Override
     public void show() {
         batch = new SpriteBatch();
+        batch.setBlendFunction(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         camera = new OrthographicCamera();
         viewport = new FitViewport(WORLD_W, WORLD_H, camera);
         viewport.apply();
@@ -84,6 +90,8 @@ public class GameScreen implements Screen {
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && !paused) {
             paused = true;
@@ -104,38 +112,50 @@ public class GameScreen implements Screen {
             player.update(delta);
             escenario.actualizar(delta);
 
+            lastContact = contact;
+            contact = Contact.NONE;
             boolean onPlat = false;
             Rectangle b = player.getBounds();
-            for (Plataforma p : escenario.getPlataformas()) {
+            for (int i = 0; i < escenario.getPlataformas().size; i++) {
+                Plataforma p = escenario.getPlataformas().get(i);
                 Rectangle pb = p.getBounds();
                 if (b.overlaps(pb) && player.getVelocity().y <= 0 && b.y >= pb.y + pb.height - 10f) {
                     player.land(pb.y + pb.height);
                     onPlat = true;
+                    contact = (i == 0) ? Contact.MAIN : Contact.SECONDARY;
                     break;
                 }
             }
-            if (!onPlat && player.isOnGround()) {
-                player.leaveGround();
+            if (!onPlat) {
+                if (player.getPosition().y <= 0) {
+                    player.land(0);
+                    contact = Contact.HAZARD;
+                } else {
+                    if (player.isOnGround()) player.leaveGround();
+                    contact = Contact.NONE;
+                }
+            }
+            if (lastContact != contact) {
+                if (contact == Contact.HAZARD) {
+                    Gdx.app.log("INFO", "Enter hazard floor");
+                } else if (lastContact == Contact.HAZARD) {
+                    Gdx.app.log("INFO", "Exit hazard floor");
+                }
             }
 
-            if (!player.isOnGround() && !onPlat) {
+            if (player.isOnGround() && contact == Contact.HAZARD) {
                 float old = hp;
-                hp -= 10f * delta;
+                hp -= 5f * delta;
                 if (hp < 0f) hp = 0f;
+                if (hp > 100f) hp = 100f;
                 if ((int)old != (int)hp) {
                     Gdx.app.debug("Game", "HP changed: " + (int)old + " -> " + (int)hp);
                 }
-                Gdx.app.log("INFO", "Off-platform damage tick: hp=" + (int)hp);
-            }
-
-            if (player.getPosition().y < -50f) {
-                float old = hp;
-                hp -= 50f * delta;
-                if (hp < 0f) hp = 0f;
-                if ((int)old != (int)hp) {
-                    Gdx.app.debug("Game", "HP changed: " + (int)old + " -> " + (int)hp);
+                hazardLogTimer -= delta;
+                if (hazardLogTimer <= 0f) {
+                    Gdx.app.debug("Game", "Hazard tick hp=" + (int)hp);
+                    hazardLogTimer = 0.25f;
                 }
-                Gdx.app.log("INFO", "Out-of-world damage tick: hp=" + (int)hp);
             }
 
             if (hp <= 0f) {
@@ -150,11 +170,24 @@ public class GameScreen implements Screen {
             }
         }
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F8)) {
+            Gdx.app.log("INFO", "DUMP player: state=" + player.getEstado() + " grounded=" + player.isOnGround() +
+                    " contact=" + contact + " hp=" + (int)hp + " score=" + score + " alpha=" + batch.getColor().a);
+        }
+
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         escenario.dibujar(batch);
+        Color bc = batch.getColor();
+        if (bc.r != 1f || bc.g != 1f || bc.b != 1f || bc.a != 1f) {
+            Gdx.app.log("WARN", "Alpha leak detected and fixed");
+            batch.setColor(1f, 1f, 1f, 1f);
+        }
+        batch.setColor(1.05f, 1.05f, 1.05f, 1f);
         player.render(batch);
+        batch.setColor(1f, 1f, 1f, 1f);
+        Gdx.app.log("INFO", "RenderGuard: batch color reset ok");
         batch.end();
 
         drawHUD();
@@ -235,7 +268,9 @@ public class GameScreen implements Screen {
         batch.draw(pixel, 20, WORLD_H - 40, barW * (hp / 100f), barH);
         batch.setColor(Color.WHITE);
         font.draw(batch, "Score: " + score, 20, WORLD_H - 60);
+        batch.setColor(Color.WHITE);
         batch.end();
+        batch.setColor(Color.WHITE);
     }
 
     private void drawPauseOverlay() {
@@ -250,7 +285,9 @@ public class GameScreen implements Screen {
         font.draw(batch, "[R] Reanudar", resumeRect.x + 10, resumeRect.y + 25);
         font.draw(batch, "[T] Terminar partida y volver a Selección", terminateRect.x + 10, terminateRect.y + 25);
         font.draw(batch, "[Q] Salir del juego", quitRect.x + 10, quitRect.y + 25);
+        batch.setColor(Color.WHITE);
         batch.end();
+        batch.setColor(Color.WHITE);
     }
 
     @Override
