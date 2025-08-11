@@ -59,15 +59,16 @@ public class RaceScreen implements Screen {
         bg = new ParallaxBackground();
         track = new Track();
         // create characters
-        player = new CharacterBase(playerId, 0);
+        player = new CharacterBase(playerId, 0, 200f, 6f);
         String[] all = {"orion","roky","thumper"};
         java.util.List<String> npcs = new java.util.ArrayList<>();
         for(String s: all) if(!s.equals(playerId)) npcs.add(s);
-        npc1 = new CharacterBase(npcs.get(0), -40);
-        npc2 = new CharacterBase(npcs.get(1), -80);
+        npc1 = new CharacterBase(npcs.get(0), -40, 210f, 6f);
+        npc2 = new CharacterBase(npcs.get(1), -80, 210f, 6f);
         playerCtrl = new PlayerController(player);
         ai1 = new AiController(npc1, track, track.getNpcMin(), track.getNpcMax());
         ai2 = new AiController(npc2, track, track.getNpcMin(), track.getNpcMax());
+        Gdx.app.log("INFO", "Player maxSpeedX=200 accelX=800 frictionX=6");
     }
 
     @Override
@@ -100,16 +101,17 @@ public class RaceScreen implements Screen {
         }
 
         camera.position.x = player.position.x + 150;
-        if(camera.position.x < 320) camera.position.x = 320;
+        float halfW = camera.viewportWidth / 2f;
+        if(camera.position.x < halfW) camera.position.x = halfW;
         if(camera.position.x > track.getFinishX()) camera.position.x = track.getFinishX();
         camera.update();
 
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        bg.render(batch,camera.position.x-320,640,360);
+        bg.render(batch,camera.position.x - halfW, camera.viewportWidth, camera.viewportHeight);
         // ground
         batch.setColor(Color.DARK_GRAY);
-        batch.draw(pixel, camera.position.x-320, track.getGroundY()-5, 640,5);
+        batch.draw(pixel, camera.position.x - halfW, track.getGroundY()-5, camera.viewportWidth,5);
         // start line
         batch.setColor(Color.WHITE);
         batch.draw(pixel,0,track.getGroundY(),5,50);
@@ -173,7 +175,12 @@ public class RaceScreen implements Screen {
         return win!=null?win.getName():"";
     }
 
-    @Override public void resize(int width,int height){}
+    @Override public void resize(int width,int height){
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.position.set(width/2f, height/2f, 0);
+        camera.update();
+    }
     @Override public void pause(){}
     @Override public void resume(){}
     @Override public void hide(){}

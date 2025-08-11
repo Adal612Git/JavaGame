@@ -28,6 +28,7 @@ public class ParallaxBackground {
             dir = Gdx.files.internal(base);
             Gdx.app.log("INFO", "Escenario fallback: " + base);
         }
+        Gdx.app.log("INFO", "ParallaxBackground: capas desde " + base);
         FileHandle[] files = dir.list();
         Array<FileHandle> pngs = new Array<>();
         for (FileHandle f : files) {
@@ -60,7 +61,9 @@ public class ParallaxBackground {
             float scale = screenH / height;
             float drawW = width * scale;
             float offset = (camX * l.ratio) % drawW;
-            for (float x = -offset; x < screenW; x += drawW) {
+            if (offset < 0) offset += drawW;
+            float start = -offset;
+            for (float x = start; x < screenW + drawW; x += drawW) {
                 batch.draw(l.region, x, 0, drawW, screenH);
             }
         }
